@@ -1,0 +1,25 @@
+{
+  "name": "Almanac — notes, one thing, habits, people",
+  "short_name": "Almanac",
+  "description": "A private notebook: tagged notes, your one thing for the day, anchor habits, a life calendar and profiles of the people you meet.",
+  "id": "./",
+  "start_url": "./#/today",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#FAF8F4",
+  "theme_color": "#FAF8F4",
+  "categories": ["productivity", "lifestyle"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "shortcuts": [
+    { "name": "New note", "url": "./#/notes?new=1", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "One Thing", "url": "./#/onething", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Habits", "url": "./#/habits", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
