@@ -193,10 +193,11 @@ function tryShortcut(editor) {
 }
 
 // ---------- toolbar ----------
+// Most-used first: on a phone only the first ~9 fit without scrolling
 const TOOLS = [
-  ['h1', 'Heading', 'h1'], ['h2', 'Subheading', 'h2'], '|',
+  ['checklist', 'Checklist (⌘⇧C)', 'checklist'], ['list', 'Bulleted list', 'list'], ['olist', 'Numbered list', 'olist'], ['quote', 'Quote', 'quote'], '|',
   ['bold', 'Bold (⌘B)', 'bold'], ['italic', 'Italic (⌘I)', 'italic'], ['underline', 'Underline (⌘U)', 'underline'], ['strike', 'Strikethrough', 'strike'], ['highlight', 'Highlight', 'highlight'], '|',
-  ['checklist', 'Checklist (⌘⇧C)', 'checklist'], ['list', 'Bulleted list', 'list'], ['olist', 'Numbered list', 'olist'], ['quote', 'Quote', 'quote'], ['code', 'Code block', 'code'], ['divider', 'Divider', 'divider'], ['link', 'Link (⌘K)', 'link'], '|',
+  ['h1', 'Heading', 'h1'], ['h2', 'Subheading', 'h2'], ['code', 'Code block', 'code'], ['divider', 'Divider', 'divider'], ['link', 'Link (⌘K)', 'link'], '|',
   ['clear', 'Clear formatting', 'clear'], ['undo', 'Undo', 'undo'], ['redo', 'Redo', 'redo'],
 ];
 function toolbarHTML() {
@@ -284,6 +285,8 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
   const tagInput = view.querySelector('.tag-input');
   const suggest = view.querySelector('.tag-suggest');
   body.innerHTML = sanitize(note.html || '');
+  // the browser re-serializes stored HTML slightly differently (' vs &#x27;), so compare edits against what it shows
+  let savedHtml = body.innerHTML;
   if (note.trashed) { body.contentEditable = 'false'; titleEl.readOnly = true; }
   try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch {}
 
@@ -299,7 +302,8 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
     const html = body.innerHTML === '<br>' ? '' : body.innerHTML;
     const title = titleEl.value.trim();
     const text = htmlToText(html);
-    if (html === note.html && title === note.title) return;
+    if ((html === savedHtml || html === note.html) && title === note.title) return;
+    savedHtml = html;
     note = { ...note, html, title, text, updated: Date.now(), todo: countTodos(body), draft: false };
     save('notes', note, { silent: true });
     setStatus();
@@ -487,7 +491,8 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
     if (next.params?.id === id) return;
     persistSoon.flush();
     const n = get('notes', id);
-    if (n && !n.title && !n.text && !(n.tags || []).length && !n.html.includes('<hr')) remove('notes', id);
+    // still a draft = never touched, so tags it inherited from the search don't keep it alive
+    if (n && !n.title && !n.text && !n.html.includes('<hr') && (n.draft || !(n.tags || []).length)) remove('notes', id);
   });
   const beforeUnload = () => persistSoon.flush();
   window.addEventListener('pagehide', beforeUnload);

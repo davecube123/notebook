@@ -14,10 +14,39 @@ export function toast(msg, { action, onAction, ms = 3200 } = {}) {
   toastTimer = setTimeout(() => el.classList.remove('show'), ms);
 }
 
+// ---------- back button for sheets and menus ----------
+// Each open sheet or menu gets its own history entry, so the phone's back button closes it
+// instead of leaving the page. Entries of overlays closed some other way (✕, tapping outside)
+// are stepped over, so one press of back always does what it looks like.
+const stack = []; // open overlays, newest last: { sid, close }
+let overlaySeq = 0;
+let entryState = history.state;
+let entryHash = location.hash;
+let autoBack = false;
+const isStale = st => !!st?.almanacSheet && !stack.some(o => o.sid === st.almanacSheet);
+
+function openOverlay(close) {
+  const sid = ++overlaySeq;
+  history.pushState({ almanacSheet: sid }, '');
+  entryState = history.state; entryHash = location.hash;
+  stack.push({ sid, close });
+  return () => { const i = stack.findIndex(o => o.sid === sid); if (i >= 0) stack.splice(i, 1); };
+}
+
+window.addEventListener('hashchange', () => { entryState = history.state; entryHash = location.hash; });
+window.addEventListener('popstate', e => {
+  // stepping back off a closed overlay's entry keeps the address; a navigation to a new page doesn't
+  const leftStale = isStale(entryState) && location.hash === entryHash; // checked before closing anything below
+  entryState = e.state; entryHash = location.hash;
+  const sid = e.state?.almanacSheet || 0;
+  while (stack.length && stack.at(-1).sid > sid) stack.at(-1).close();
+  if (autoBack) { autoBack = false; return; }
+  if (leftStale || isStale(e.state)) { autoBack = true; history.back(); }
+});
+
 // ---------- sheet / dialog ----------
 // Opens a bottom sheet on phones, a centered dialog on larger screens.
 // `render(body, close)` fills the content. Returns { el, close }.
-const stack = [];
 export function sheet({ title = '', render, onClose, wide = false, className = '' }) {
   const wrap = document.createElement('div');
   wrap.className = 'sheet-wrap';
@@ -34,13 +63,13 @@ export function sheet({ title = '', render, onClose, wide = false, className = '
   const close = (result) => {
     if (closed) return; closed = true;
     wrap.classList.remove('open');
-    stack.splice(stack.indexOf(close), 1);
+    unregister();
     setTimeout(() => wrap.remove(), 220);
     onClose?.(result);
   };
   wrap.querySelector('.sheet-backdrop').onclick = () => close();
   wrap.querySelector('[data-close]')?.addEventListener('click', () => close());
-  stack.push(close);
+  const unregister = openOverlay(close);
   render(body, close);
   requestAnimationFrame(() => wrap.classList.add('open'));
   setTimeout(() => body.querySelector('[autofocus]')?.focus(), 60);
@@ -62,7 +91,7 @@ export function sheet({ title = '', render, onClose, wide = false, className = '
   });
   return { el: wrap, body, close };
 }
-export function closeTopSheet() { const c = stack.at(-1); if (c) { c(); return true; } return false; }
+export function closeTopSheet() { const o = stack.at(-1); if (o) { o.close(); return true; } return false; }
 export const hasOpenSheet = () => stack.length > 0;
 
 export function confirmDialog(message, { ok = 'Delete', danger = true, title = 'Are you sure?' } = {}) {
@@ -104,8 +133,9 @@ export function promptDialog(title, { value = '', placeholder = '', ok = 'Save',
 }
 
 // ---------- popover menu anchored to an element ----------
+let closeOpenMenu = null;
 export function menu(anchor, items) {
-  document.querySelector('.menu-pop')?.remove();
+  closeOpenMenu?.();
   const m = document.createElement('div');
   m.className = 'menu-pop';
   m.innerHTML = items.filter(Boolean).map((it, i) => it === '-' ? '<hr>' :
@@ -118,13 +148,21 @@ export function menu(anchor, items) {
   if (top + mh > window.innerHeight - 8) top = Math.max(8, r.top - mh - 6);
   m.style.left = left + 'px'; m.style.top = top + 'px';
   const list = items.filter(Boolean);
-  const off = (e) => { if (!m.contains(e.target)) { m.remove(); document.removeEventListener('pointerdown', off, true); } };
+  let closed = false;
+  const close = () => {
+    if (closed) return; closed = true;
+    m.remove(); document.removeEventListener('pointerdown', off, true); unregister();
+    if (closeOpenMenu === close) closeOpenMenu = null;
+  };
+  closeOpenMenu = close;
+  const off = (e) => { if (!m.contains(e.target)) close(); };
+  const unregister = openOverlay(close);
   setTimeout(() => document.addEventListener('pointerdown', off, true));
   m.addEventListener('click', e => {
     const b = e.target.closest('button[data-i]');
     if (!b) return;
-    m.remove(); document.removeEventListener('pointerdown', off, true);
-    items.filter(Boolean)[+b.dataset.i]?.action?.();
+    close();
+    list[+b.dataset.i]?.action?.();
   });
   requestAnimationFrame(() => m.classList.add('open'));
   return list;

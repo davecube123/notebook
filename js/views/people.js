@@ -6,7 +6,7 @@ import { navigate, rerender } from '../router.js';
 import { sheet, toast, confirmDialog, menu } from '../ui.js';
 import { SECTIONS, BIG_FIVE, TABS, CIRCLES } from './fields.js';
 
-const ui = { q: '', circle: '', sort: 'recent', hideEmpty: false };
+const ui = { q: '', circle: '', sort: 'recent' };
 const KEEP_DAYS = { 'Week': 7, '2 weeks': 14, 'Month': 30, '3 months': 90, '6 months': 180, 'Year': 365 };
 
 export const lastSeen = p => (p.interactions || []).map(i => i.date).sort().at(-1) || null;
@@ -145,7 +145,7 @@ export function newPersonSheet(prefill = {}) {
 function propRow(p, def) {
   const [key, label, type = 'text', options] = def;
   const v = p.fields?.[key] || '';
-  if (ui.hideEmpty && !v) return '';
+  if (settings().personHideEmpty && !v) return '';
   let shown = esc(v);
   if (type === 'date' && v) shown = `${fmtDay(v, { month: 'long', day: 'numeric', year: 'numeric' })} <span class="faint">· ${key === 'birthday' && nextBirthday(p) ? `in ${nextBirthday(p).inDays}d` : relDays(v)}</span>`;
   if (type === 'long' && v) shown = esc(v).replace(/\n/g, '<br>');
@@ -236,8 +236,8 @@ function renderPerson(main, id, query) {
         ${rc ? `<div class="banner warn">${icon('bell')}It's been ${rc.gap === Infinity ? 'a while' : rc.gap + ' days'} — you wanted to stay in touch every ${p.fields.keepInTouch.toLowerCase()}.</div>` : ''}
       </div>
       <nav class="seg" role="tablist">${TABS.map(([k, l, ic]) => `<a role="tab" class="${k === tab ? 'on' : ''}" href="#/people/${id}?tab=${k}" aria-selected="${k === tab}">${icon(ic)}<span>${l}</span></a>`).join('')}</nav>
+      ${tab !== 'log' ? `<div class="tab-tools"><button class="link small" data-act="hideempty">${settings().personHideEmpty ? 'Show empty fields' : 'Hide empty fields'}</button></div>` : ''}
       <div class="tab-body">${tabHTML(p, tab)}</div>
-      ${tab !== 'log' ? `<button class="link small center-block" data-act="hideempty">${ui.hideEmpty ? 'Show empty fields' : 'Hide empty fields'}</button>` : ''}
     </div>`;
     main.querySelectorAll('textarea.autosize').forEach(a => { a.style.height = 'auto'; a.style.height = a.scrollHeight + 'px'; });
   };
@@ -295,7 +295,7 @@ function renderPerson(main, id, query) {
     const p = get('people', id);
     switch (b.dataset.act) {
       case 'fav': update({ favorite: !p.favorite }, { redraw: true }); haptic(); break;
-      case 'hideempty': ui.hideEmpty = !ui.hideEmpty; draw(); break;
+      case 'hideempty': setSettings({ personHideEmpty: !settings().personHideEmpty }); draw(); break;
       case 'circle': menu(b, [...CIRCLES.map(c => ({ label: c, checked: p.circle === c, action: () => update({ circle: c }, { redraw: true }) })), '-', { label: 'None', action: () => update({ circle: '' }, { redraw: true }) }]); break;
       case 'tag': {
         const { promptDialog } = await import('../ui.js');

@@ -52,7 +52,7 @@ export function renderToday(main) {
     ${installCard()}
     <div class="today-grid">
       <div class="col">
-        ${oneThingCard(t, { big: true })}
+        ${oneThingCard(t, { big: true, link: true })}
         ${habitsCard(t)}
       </div>
       <div class="col">

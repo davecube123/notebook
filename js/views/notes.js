@@ -12,7 +12,11 @@ const ui = { q: '', tags: [], range: 'any', from: '', to: '', dateField: 'update
 export function newNote(extra = {}) {
   const now = Date.now();
   const n = { id: uid(), title: '', html: '', text: '', tags: [], pinned: false, archived: false, trashed: false, created: now, updated: now, draft: true, ...extra };
-  if (ui.tags.length && !extra.tags) n.tags = [...ui.tags];
+  if (!extra.tags) {
+    // a new note picks up the tags you're filtering by, from the chips or typed in the search
+    const known = new Set(allTags().map(([t]) => t));
+    n.tags = [...new Set([...ui.tags, ...parseQuery(ui.q).tags.filter(t => known.has(t))])];
+  }
   save('notes', n, { silent: true });
   return n;
 }
@@ -55,7 +59,6 @@ function rangeBounds() {
 
 export function filterNotes({ q = ui.q, tags = ui.tags, box = ui.box } = {}) {
   const pq = parseQuery(q);
-  const wantTags = [...new Set([...tags, ...pq.tags])];
   let [from, to] = rangeBounds();
   if (pq.from) from = pq.from;
   if (pq.to) to = pq.to;
@@ -66,7 +69,9 @@ export function filterNotes({ q = ui.q, tags = ui.tags, box = ui.box } = {}) {
     if (box === 'trash') { if (!n.trashed) return false; }
     else if (n.trashed) return false;
     else if (box === 'archive' ? !n.archived : n.archived) return false;
-    if (wantTags.length && !wantTags.every(t => (n.tags || []).some(nt => nt === t || nt.startsWith(t + '/')))) return false;
+    // chip tags match exactly (plus nested ones); typed tags match as you type, so "#la" finds #lakbay
+    if (tags.length && !tags.every(t => (n.tags || []).some(nt => nt === t || nt.startsWith(t + '/')))) return false;
+    if (pq.tags.length && !pq.tags.every(t => (n.tags || []).some(nt => nt.startsWith(t)))) return false;
     if (pq.pinned && !n.pinned) return false;
     if (pq.todo && !(n.todo && n.todo.total > n.todo.done)) return false;
     const day = ymd(new Date(n[field]));
@@ -119,7 +124,9 @@ function groupNotes(arr) {
 function noteItem(n, q, activeId) {
   const pq = parseQuery(q);
   const title = noteTitle(n);
-  const body = snippet((n.text || '').replace(title, ''), pq.text);
+  // untitled notes use their first line as the title, so the preview starts at the second line
+  const lines = (n.text || '').split('\n').map(l => l.trim()).filter(Boolean);
+  const body = snippet((n.title?.trim() ? lines : lines.slice(1)).join(' '), pq.text);
   const dateTs = settings().noteSort === 'created' ? n.created : n.updated;
   return `<a class="note-item ${n.id === activeId ? 'active' : ''}" href="#/notes/${n.id}" data-note-id="${n.id}">
     <div class="note-item-title">${n.pinned ? `<span class="pin-dot">${icon('pin')}</span>` : ''}${highlight(title, pq.text)}</div>
@@ -251,6 +258,23 @@ function bindList(root, activeId) {
   });
   // keep focus in the search box while tapping a suggestion
   root.addEventListener('pointerdown', e => { if (e.target.closest('[data-sugtag]')) e.preventDefault(); });
+  // long-press (phone) or right-click: quick actions without opening the note
+  root.addEventListener('contextmenu', e => {
+    const item = e.target.closest('[data-note-id]');
+    if (!item) return;
+    e.preventDefault();
+    const n = get('notes', item.dataset.noteId);
+    const put = (patch, msg, undo) => { save('notes', { ...n, ...patch }); refreshList(); toast(msg, undo ? { action: 'Undo', onAction: () => { save('notes', n); refreshList(); } } : {}); };
+    menu(item, n.trashed ? [
+      { label: 'Restore', icon: 'restore', action: () => put({ trashed: false }, 'Restored') },
+      { label: 'Delete forever', icon: 'trash', danger: true, action: async () => { if (await confirmDialog('This cannot be undone.')) { remove('notes', n.id); refreshList(); } } },
+    ] : [
+      { label: n.pinned ? 'Unpin' : 'Pin', icon: 'pin', action: () => put({ pinned: !n.pinned }, n.pinned ? 'Unpinned' : 'Pinned') },
+      { label: n.archived ? 'Unarchive' : 'Archive', icon: 'archive', action: () => put({ archived: !n.archived }, n.archived ? 'Moved to Notes' : 'Archived', true) },
+      '-',
+      { label: 'Move to Trash', icon: 'trash', danger: true, action: () => put({ trashed: true, pinned: false }, 'Moved to Trash', true) },
+    ]);
+  });
   root.addEventListener('click', async e => {
     const st = e.target.closest('[data-sugtag]');
     if (st) return pickTag(st.dataset.sugtag);

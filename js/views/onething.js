@@ -37,12 +37,13 @@ export function oneStats() {
 }
 
 // Card used on the Today page and at the top of the One Thing page
-export function oneThingCard(day = today(), { big = false } = {}) {
+export function oneThingCard(day = today(), { big = false, link = false } = {}) {
+  const more = link ? `<a class="one-more" href="#/onething">History</a>` : '';
   const o = getOne(day);
   const y = getOne(addDays(day, -1));
   if (!o) {
     return `<div class="one-card empty-one ${big ? 'big' : ''}">
-      <div class="one-eyebrow">${icon('target')}The one thing</div>
+      <div class="one-eyebrow">${icon('target')}The one thing${more}</div>
       <form class="one-form" data-one-form="${day}">
         <input class="one-input" name="text" maxlength="140" placeholder="What must you finish ${day === today() ? 'today' : 'this day'}?" autocomplete="off" enterkeyhint="done" aria-label="Your one thing">
         <button class="btn primary" aria-label="Set">${icon('check')}</button>
@@ -52,7 +53,7 @@ export function oneThingCard(day = today(), { big = false } = {}) {
     </div>`;
   }
   return `<div class="one-card ${o.done ? 'is-done' : ''} ${big ? 'big' : ''}">
-    <div class="one-eyebrow">${icon('target')}The one thing${o.done ? ` · <span>done ${fmtTime(o.doneAt)}</span>` : ''}</div>
+    <div class="one-eyebrow">${icon('target')}The one thing${o.done ? ` · <span>done ${fmtTime(o.doneAt)}</span>` : ''}${more}</div>
     <div class="one-row">
       <button class="one-check" data-one-toggle="${day}" role="checkbox" aria-checked="${o.done}" aria-label="Mark done">${icon('check')}</button>
       <div class="one-text">${esc(o.text)}</div>
