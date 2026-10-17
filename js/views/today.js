@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { navigate, rerender } from '../router.js';
 import { oneThingCard, bindOneThing } from './onething.js';
 import { habitsCard, bindHabits } from './habits.js';
-import { trackers, trackerStats, logEvent, eventsOn } from './calendar.js';
+import { trackers, trackerStats, trackTiles, bindTrackTiles } from './calendar.js';
 import { newNote, noteTitle } from './notes.js';
 import { nextBirthday, reconnectDue, avatar } from './people.js';
 import { installCard, bindInstall } from '../install.js';
@@ -27,7 +27,6 @@ export function renderToday(main) {
   const t = today();
   const st = settings();
   const ts = trackers();
-  const todays = eventsOn(t);
   const overdue = ts.filter(x => trackerStats(x).overdue);
   const notes = list('notes').filter(n => !n.trashed && !n.draft);
   const recent = [...notes].sort((a, b) => b.updated - a.updated).slice(0, 4);
@@ -58,7 +57,7 @@ export function renderToday(main) {
       <div class="col">
         <div class="card pad">
           <div class="card-head"><h3>${icon('calendar')}Log today</h3><a class="link small" href="#/calendar">Calendar</a></div>
-          ${ts.length ? `<div class="quick-grid">${ts.map(x => { const n = todays.filter(e => e.trackerId === x.id).length; return `<button class="quick-btn ${n ? 'on' : ''}" data-log="${x.id}" style="--c:${x.color}"><span class="qe">${esc(x.emoji)}</span><span class="qn">${esc(x.name)}</span>${n ? `<span class="qc">${n > 1 ? '×' + n : icon('check')}</span>` : ''}</button>`; }).join('')}</div>`
+          ${ts.length ? trackTiles(t)
             : `<p class="muted small">Make trackers for things that happen regularly — sunsets, workouts, calls home — and log them with one tap.</p><a class="btn ghost sm" href="#/calendar">${icon('plus')}Create a tracker</a>`}
           ${overdue.map(x => `<div class="nudge-line">${icon('bell')}It's been <b>${trackerStats(x).since} days</b> since ${esc(x.emoji)} ${esc(x.name)}.</div>`).join('')}
         </div>
@@ -90,9 +89,8 @@ export function renderToday(main) {
   bindOneThing(page);
   bindHabits(page);
   bindInstall(page, rerender);
+  bindTrackTiles(page);
   page.addEventListener('click', e => {
-    const lg = e.target.closest('[data-log]');
-    if (lg) { logEvent(lg.dataset.log); rerender(); return; }
     const a = e.target.closest('[data-act]');
     if (!a) return;
     if (a.dataset.act === 'newnote') { const n = newNote(); navigate(`#/notes/${n.id}`); }

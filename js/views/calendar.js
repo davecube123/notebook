@@ -1,5 +1,5 @@
 // Life calendar: trackers for things that happen regularly, a month grid, day details.
-import { list, get, save, remove, uid, settings } from '../db.js';
+import { list, get, save, remove, uid, settings, setSettings } from '../db.js';
 import { esc, today, ymd, addDays, parseDay, fmtMonth, fmtLongDay, fmtDay, hm, relDays, daysBetween, weekdayNames, COLORS, haptic } from '../util.js';
 import { icon } from '../icons.js';
 import { rerender, navigate } from '../router.js';
@@ -9,7 +9,9 @@ import { getOne, oneThingCard, bindOneThing } from './onething.js';
 import { isPerfect, habitsOn, logFor } from './habits.js';
 import { noteTitle } from './notes.js';
 
-const ui = { y: null, m: null, sel: null, filter: '', layers: { trackers: true, one: true, habits: true, notes: false } };
+const ui = { y: null, m: null, sel: null, layers: { trackers: true, one: true, habits: true, notes: false } };
+// trackers hidden from the month grid (remembered)
+const hiddenTrackers = () => new Set(settings().calHidden || []);
 
 export const trackers = () => list('trackers').filter(t => !t.archived).sort((a, b) => a.created - b.created);
 export const eventsOn = day => list('events').filter(e => e.date === day).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
@@ -41,6 +43,76 @@ export function logEvent(trackerId, { date = today(), time = hm(), note = '' } =
   return ev;
 }
 
+// ---------- tracking tiles: tap to log/unlog a tracker for a day, hold for time & note ----------
+export function trackTiles(day) {
+  const ts = trackers();
+  if (!ts.length) return `<p class="muted small">Make trackers for things that happen regularly — sunsets, workouts, calls home — and log them with one tap.</p>
+    <button class="btn ghost sm" data-act="newtracker">${icon('plus')}Create a tracker</button>`;
+  const evs = eventsOn(day);
+  return `<div class="quick-grid">${ts.map(x => {
+    const mine = evs.filter(e => e.trackerId === x.id);
+    const time = mine.find(e => e.time)?.time;
+    const note = mine.some(e => e.note);
+    return `<button class="quick-btn ${mine.length ? 'on' : ''}" data-track="${x.id}" data-track-day="${day}" style="--c:${x.color}" aria-pressed="${!!mine.length}">
+      <span class="qe">${esc(x.emoji)}</span><span class="qn">${esc(x.name)}</span>
+      ${mine.length ? `<span class="qc">${mine.length > 1 ? '×' + mine.length : icon('check')}</span>` : ''}
+      ${time || note ? `<span class="qt">${time || ''}${note ? `${time ? ' · ' : ''}note` : ''}</span>` : ''}
+    </button>`;
+  }).join('')}</div>
+  <p class="track-hint muted small">Tap to log or unlog · hold for time, note or another log</p>`;
+}
+
+function toggleTrack(tid, day) {
+  const mine = eventsOn(day).filter(e => e.trackerId === tid);
+  if (!mine.length) return logEvent(tid, { date: day, time: day === today() ? hm() : '' });
+  const last = mine.at(-1);
+  remove('events', last.id); haptic(8);
+  const t = get('trackers', tid);
+  toast(`${t.emoji} ${t.name} removed`, { action: 'Undo', onAction: () => { save('events', last); rerender(); } });
+}
+
+function trackMenu(btn, after) {
+  const tid = btn.dataset.track, day = btn.dataset.trackDay;
+  const mine = eventsOn(day).filter(e => e.trackerId === tid);
+  const t = get('trackers', tid);
+  menu(btn, [
+    mine.length
+      ? { label: 'Time & note…', icon: 'edit', action: () => eventSheet(mine.at(-1)) }
+      : { label: 'Log with time & note…', icon: 'edit', action: () => eventSheet(logEvent(tid, { date: day, time: day === today() ? hm() : '' })) },
+    mine.length ? { label: 'Log again', icon: 'plus', action: () => { logEvent(tid, { date: day, time: day === today() ? hm() : '' }); after(); } } : null,
+    mine.length ? { label: 'Remove', icon: 'trash', danger: true, action: () => { toggleTrack(tid, day); after(); } } : null,
+    '-',
+    { label: `${t.name} stats`, icon: 'history', action: () => trackerDetail(t) },
+  ]);
+}
+
+// Wires tracking tiles inside `root`. Long-press uses a timer, since phones don't all fire contextmenu.
+export function bindTrackTiles(root, after = rerender) {
+  let timer = null, held = false;
+  root.addEventListener('pointerdown', e => {
+    const b = e.target.closest('[data-track]');
+    if (!b) return;
+    held = false;
+    timer = setTimeout(() => { held = true; haptic(15); trackMenu(b, after); }, 480);
+  });
+  const cancel = () => clearTimeout(timer);
+  root.addEventListener('pointerup', cancel);
+  root.addEventListener('pointercancel', cancel);
+  root.addEventListener('pointerleave', cancel, true);
+  root.addEventListener('contextmenu', e => {
+    const b = e.target.closest('[data-track]');
+    if (!b) return;
+    e.preventDefault();
+    if (!held) { cancel(); held = true; trackMenu(b, after); }
+  });
+  root.addEventListener('click', e => {
+    const b = e.target.closest('[data-track]');
+    if (!b) return;
+    if (held) { held = false; return; }
+    toggleTrack(b.dataset.track, b.dataset.trackDay); after();
+  });
+}
+
 function monthGrid() {
   const ws = settings().weekStart;
   const first = new Date(ui.y, ui.m, 1);
@@ -48,50 +120,58 @@ function monthGrid() {
   const start = addDays(ymd(first), -lead);
   const t = today();
   const tmap = new Map(list('trackers').map(x => [x.id, x]));
-  const byDay = new Map();
-  list('events').forEach(e => { if (!ui.filter || e.trackerId === ui.filter) { if (!byDay.has(e.date)) byDay.set(e.date, []); byDay.get(e.date).push(e); } });
+  const hidden = hiddenTrackers();
+  const order = new Map(trackers().map((x, i) => [x.id, i]));
+  const visible = trackers().filter(x => !hidden.has(x.id));
+  const solo = visible.length === 1 && order.size > 1 ? visible[0] : null; // only one shown: tint its days
+  const byDay = new Map(); // day -> Set of tracker ids
+  list('events').forEach(e => {
+    if (hidden.has(e.trackerId) || !order.has(e.trackerId)) return;
+    if (!byDay.has(e.date)) byDay.set(e.date, new Set());
+    byDay.get(e.date).add(e.trackerId);
+  });
   const noteDays = new Set(ui.layers.notes ? list('notes').filter(n => !n.trashed && !n.draft).map(n => ymd(new Date(n.created))) : []);
   const cells = [];
   const weeks = Math.ceil((lead + new Date(ui.y, ui.m + 1, 0).getDate()) / 7);
   for (let i = 0; i < weeks * 7; i++) {
     const d = addDays(start, i);
     const inMonth = parseDay(d).getMonth() === ui.m;
-    const evs = ui.layers.trackers ? (byDay.get(d) || []) : [];
+    const ids = ui.layers.trackers ? [...(byDay.get(d) || [])].sort((a, b) => order.get(a) - order.get(b)) : [];
     const o = ui.layers.one ? getOne(d) : null;
     const perfect = ui.layers.habits && d <= t && isPerfect(d);
-    const dots = evs.slice(0, 4).map(e => { const tr = tmap.get(e.trackerId); return `<i class="cal-dot" style="background:${tr?.color || 'var(--muted)'}" title="${esc(tr?.name || '')}"></i>`; }).join('') + (evs.length > 4 ? `<i class="cal-more">+${evs.length - 4}</i>` : '');
+    const dots = ids.slice(0, 6).map(id => { const tr = tmap.get(id); return `<i class="cal-dot" style="background:${tr.color}" title="${esc(tr.name)}"></i>`; }).join('') + (ids.length > 6 ? `<i class="cal-more">+${ids.length - 6}</i>` : '');
     cells.push(`<button class="cal-cell ${inMonth ? '' : 'out'} ${d === t ? 'today' : ''} ${d === ui.sel ? 'sel' : ''} ${d > t ? 'future' : ''}" data-day="${d}" aria-label="${fmtLongDay(d)}">
       <span class="cal-num">${parseDay(d).getDate()}</span>
       <span class="cal-marks">${o?.done ? `<i class="cal-one" title="One thing done">${icon('target')}</i>` : ''}${perfect ? `<i class="cal-perfect" title="All habits done">${icon('flame')}</i>` : ''}${noteDays.has(d) ? '<i class="cal-note"></i>' : ''}</span>
       <span class="cal-dots">${dots}</span>
-      ${ui.filter && evs.length ? `<span class="cal-fill" style="background:${tmap.get(ui.filter)?.color}"></span>` : ''}
+      ${solo && ids.length ? `<span class="cal-fill" style="background:${solo.color}"></span>` : ''}
     </button>`);
   }
   return `<div class="cal-week">${weekdayNames(ws).map(n => `<span>${n}</span>`).join('')}</div><div class="cal-grid">${cells.join('')}</div>`;
 }
 
 function dayPanel(day) {
-  const tmap = new Map(list('trackers').map(x => [x.id, x]));
-  const evs = eventsOn(day);
   const notes = list('notes').filter(n => !n.trashed && !n.draft && ymd(new Date(n.created)) === day);
   const people = list('people');
   const met = people.flatMap(p => (p.interactions || []).filter(i => i.date === day).map(i => ({ p, i })));
   const bdays = people.filter(p => p.fields?.birthday && p.fields.birthday.slice(5) === day.slice(5));
   const hs = habitsOn(day);
   const dn = new Set(logFor(day).done);
-  const ts = trackers();
+  const showOne = day <= addDays(today(), 7) && (getOne(day) || day >= today());
+  const showHabits = hs.length && day <= today();
+  const also = [
+    ...bdays.map(p => `<a class="day-line" href="#/people/${p.id}">${icon('cake')}<span><b>${esc(p.name)}</b>'s birthday</span>${icon('chevR', 'day-chev')}</a>`),
+    ...met.map(({ p, i }) => `<a class="day-line" href="#/people/${p.id}">${icon('chat')}<span>Saw <b>${esc(p.name)}</b>${i.note ? ' — ' + esc(i.note.slice(0, 60)) : ''}</span>${icon('chevR', 'day-chev')}</a>`),
+    ...notes.map(n => `<a class="day-line" href="#/notes/${n.id}">${icon('notes')}<span>${esc(noteTitle(n))}</span>${icon('chevR', 'day-chev')}</a>`),
+  ];
   return `<div class="day-panel">
     <div class="day-head"><h2>${fmtLongDay(day)}</h2><span class="muted small">${relDays(day)}</span></div>
-    ${ts.length ? `<div class="chip-row wrap quick-log">${ts.map(t => `<button class="chip log-chip" data-log="${t.id}" style="--c:${t.color}">${esc(t.emoji)} ${esc(t.name)} ${icon('plus')}</button>`).join('')}</div>` : ''}
-    ${evs.length ? `<div class="card list-card">${evs.map(e => { const t = tmap.get(e.trackerId); return `<div class="list-row ev-row" data-ev="${e.id}">
-      <span class="ev-badge" style="--c:${t?.color || 'var(--muted)'}">${esc(t?.emoji || '•')}</span>
-      <div class="grow"><b>${esc(t?.name || 'Deleted tracker')}</b><div class="muted small">${e.time || ''}${e.note ? ' · ' + esc(e.note) : ''}</div></div>
-      <button class="icon-btn sm" data-ev-edit="${e.id}" aria-label="Edit">${icon('edit')}</button></div>`; }).join('')}</div>` : `<p class="muted small">${ts.length ? 'Nothing logged. Tap a tracker above to log it on this day.' : ''}</p>`}
-    ${day <= addDays(today(), 7) ? `<div class="day-one">${getOne(day) || day >= today() ? oneThingCard(day) : ''}</div>` : ''}
-    ${hs.length && day <= today() ? `<div class="day-line">${icon('flame')}<span>Habits: <b>${hs.filter(h => dn.has(h.id)).length}/${hs.length}</b>${isPerfect(day) ? ' — perfect day' : ''}</span><button class="link small" data-day-habits="${day}">Edit</button></div>` : ''}
-    ${bdays.map(p => `<a class="day-line" href="#/people/${p.id}">${icon('cake')}<span><b>${esc(p.name)}</b>'s birthday</span></a>`).join('')}
-    ${met.map(({ p, i }) => `<a class="day-line" href="#/people/${p.id}">${icon('chat')}<span>Saw <b>${esc(p.name)}</b>${i.note ? ' — ' + esc(i.note.slice(0, 60)) : ''}</span></a>`).join('')}
-    ${notes.map(n => `<a class="day-line" href="#/notes/${n.id}">${icon('notes')}<span>${esc(noteTitle(n))}</span></a>`).join('')}
+    <section class="day-section"><h3 class="day-label">Track</h3>${trackTiles(day)}</section>
+    ${showOne || showHabits ? `<section class="day-section"><h3 class="day-label">The day</h3>
+      ${showOne ? `<div class="day-one">${oneThingCard(day)}</div>` : ''}
+      ${showHabits ? `<div class="day-line">${icon('flame')}<span>Habits <b>${hs.filter(h => dn.has(h.id)).length}/${hs.length}</b>${isPerfect(day) ? ' — perfect day' : ''}</span><button class="link small" data-day-habits="${day}">Edit</button></div>` : ''}
+    </section>` : ''}
+    ${also.length ? `<section class="day-section"><h3 class="day-label">On this day</h3><div class="day-also">${also.join('')}</div></section>` : ''}
   </div>`;
 }
 
@@ -111,9 +191,16 @@ export function renderCalendar(main, params, query) {
           <button class="icon-btn" data-act="next" aria-label="Next month">${icon('chevR')}</button>
           <button class="btn ghost sm" data-act="today">Today</button>
         </div>
-        ${ts.length ? `<div class="chip-row"><button class="chip ${!ui.filter ? 'on' : ''}" data-filter="">All</button>${ts.map(x => `<button class="chip ${ui.filter === x.id ? 'on' : ''}" data-filter="${x.id}"><i class="dot" style="background:${x.color}"></i>${esc(x.emoji)} ${esc(x.name)}</button>`).join('')}</div>` : ''}
+        ${ts.length ? (() => {
+          const hidden = hiddenTrackers();
+          const ym = `${ui.y}-${String(ui.m + 1).padStart(2, '0')}`;
+          const count = id => new Set(list('events').filter(e => e.trackerId === id && e.date.startsWith(ym)).map(e => e.date)).size;
+          return `<div class="chip-row" role="group" aria-label="Show trackers">${ts.map(x => `<button class="chip track-chip ${hidden.has(x.id) ? 'off' : ''}" data-toggle-tracker="${x.id}" aria-pressed="${!hidden.has(x.id)}" style="--c:${x.color}">
+            <i class="dot"></i>${esc(x.emoji)} ${esc(x.name)}<span class="chip-count">${count(x.id)}</span></button>`).join('')}
+            ${hidden.size ? `<button class="chip ghost" data-show-all>Show all</button>` : ''}</div>`;
+        })() : ''}
         ${monthGrid()}
-        <div class="cal-legend muted small"><span><i class="cal-dot" style="background:var(--accent)"></i>tracker</span><span>${icon('target')}one thing</span><span>${icon('flame')}perfect habits</span></div>
+        <div class="cal-legend muted small"><span>${icon('target')}one thing done</span><span>${icon('flame')}all habits done</span></div>
       </div>
       <div class="cal-side">${dayPanel(ui.sel)}</div>
     </div>
@@ -129,6 +216,7 @@ export function renderCalendar(main, params, query) {
   </div>`;
   const page = main.querySelector('.page');
   bindOneThing(page);
+  bindTrackTiles(page);
   page.addEventListener('click', e => {
     const b = e.target.closest('[data-act]');
     if (b) {
@@ -154,12 +242,14 @@ export function renderCalendar(main, params, query) {
       if (!matchMedia('(min-width: 980px)').matches) setTimeout(() => main.querySelector('.cal-side')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
       return;
     }
-    const f = e.target.closest('[data-filter]');
-    if (f) { ui.filter = f.dataset.filter; return rerender(); }
-    const lg = e.target.closest('[data-log]');
-    if (lg) { logEvent(lg.dataset.log, { date: ui.sel, time: ui.sel === t ? hm() : '' }); return rerender(); }
-    const ee = e.target.closest('[data-ev-edit]');
-    if (ee) return eventSheet(get('events', ee.dataset.evEdit));
+    const tg = e.target.closest('[data-toggle-tracker]');
+    if (tg) {
+      const hidden = hiddenTrackers(), id = tg.dataset.toggleTracker;
+      hidden.has(id) ? hidden.delete(id) : hidden.add(id);
+      setSettings({ calHidden: [...hidden] }); haptic(5);
+      return rerender();
+    }
+    if (e.target.closest('[data-show-all]')) { setSettings({ calHidden: [] }); return rerender(); }
     const tr = e.target.closest('[data-tracker]');
     if (tr) return trackerDetail(get('trackers', tr.dataset.tracker));
     const dh = e.target.closest('[data-day-habits]');
@@ -259,7 +349,7 @@ function trackerDetail(t) {
       body.querySelector('[data-del]').onclick = async () => {
         if (!await confirmDialog(`Delete “${t.name}” and all ${s.total} entries?`)) return;
         list('events').filter(e => e.trackerId === t.id).forEach(e => remove('events', e.id));
-        remove('trackers', t.id); if (ui.filter === t.id) ui.filter = ''; close(); rerender();
+        remove('trackers', t.id); close(); rerender();
       };
     },
   });

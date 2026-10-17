@@ -541,7 +541,7 @@ body.in-editor #toast { bottom: 80px; }
 .cal-main .chip-row { margin: 0 -16px 6px; }
 .cal-week { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-size: 12px; font-weight: 500; color: var(--muted); padding: 8px 0 4px; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; touch-action: pan-y; }
-.cal-cell { position: relative; aspect-ratio: 1 / 1.05; border-radius: 10px; display: flex; flex-direction: column; align-items: center; padding: 5px 2px 4px; transition: background .12s; overflow: hidden; }
+.cal-cell { position: relative; aspect-ratio: 1 / 1.22; border-radius: 10px; display: flex; flex-direction: column; align-items: center; padding: 5px 2px 4px; transition: background .12s; overflow: hidden; }
 .cal-cell:hover { background: var(--fill-2); }
 .cal-cell.out { opacity: .35; }
 .cal-num { font-size: 17px; font-weight: 400; width: 27px; height: 27px; border-radius: 50%; display: grid; place-items: center; font-variant-numeric: tabular-nums; position: relative; z-index: 1; }
@@ -553,8 +553,8 @@ body.in-editor #toast { bottom: 80px; }
 .cal-one { color: var(--good); }
 .cal-perfect { color: var(--warn); }
 .cal-note { width: 5px; height: 5px; border-radius: 50%; background: var(--faint); align-self: center; }
-.cal-dots { display: flex; gap: 2.5px; flex-wrap: wrap; justify-content: center; margin-top: auto; position: relative; z-index: 1; }
-.cal-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
+.cal-dots { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; max-width: 30px; margin-top: 2px; position: relative; z-index: 1; }
+.cal-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; }
 .cal-more { font-size: 9px; font-style: normal; color: var(--muted); line-height: 7px; }
 .cal-fill { position: absolute; inset: 3px; border-radius: 9px; opacity: .16; }
 .cal-legend { display: flex; gap: 14px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
@@ -563,12 +563,16 @@ body.in-editor #toast { bottom: 80px; }
 .day-panel { background: var(--surface); border-radius: var(--radius); padding: 16px; scroll-margin-top: 12px; }
 .day-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 12px; }
 .day-head h2 { font-size: 17px; }
-.quick-log { margin-bottom: 12px; }
-.log-chip { background: color-mix(in srgb, var(--c) 12%, transparent); }
-.log-chip .ic { width: 14px; height: 14px; color: var(--c); }
-.log-chip:hover { background: color-mix(in srgb, var(--c) 10%, var(--surface)); }
-.day-panel .list-card { margin-bottom: 12px; background: var(--surface-2); }
 .ev-badge { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--c) 16%, transparent); font-size: 17px; flex: none; }
+.day-section + .day-section { margin-top: 20px; }
+.day-label { font-size: 13px; font-weight: 400; text-transform: uppercase; letter-spacing: 0; color: var(--muted); margin: 0 0 8px; }
+.track-hint { margin-top: 8px; }
+.track-chip .dot { background: var(--c); }
+.track-chip.off { color: var(--muted); }
+.track-chip.off .dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
+.track-chip.off .chip-count { opacity: .4; }
+.day-also .day-line:first-child { border-top: 0; }
+.day-chev { margin-left: auto; width: 16px !important; height: 16px !important; color: var(--faint) !important; }
 .day-line { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-top: .5px solid var(--line); font-size: 15px; }
 .day-line .ic { width: 17px; height: 17px; color: var(--muted); }
 .day-line span { flex: 1; }
@@ -591,7 +595,10 @@ body.in-editor #toast { bottom: 80px; }
 .quick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
 .quick-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px 10px; border-radius: var(--radius); background: var(--fill-2); transition: background .15s, opacity .1s; }
 .quick-btn:active { opacity: .6; }
-.quick-btn.on { background: color-mix(in srgb, var(--c) 14%, transparent); }
+.quick-btn { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.quick-btn.on { background: color-mix(in srgb, var(--c) 16%, transparent); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--c) 60%, transparent); }
+.qt { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.quick-btn.on .qt { color: color-mix(in srgb, var(--c) 70%, var(--ink)); }
 .qe { font-size: 24px; line-height: 1.1; }
 .qn { font-size: 13px; font-weight: 500; text-align: center; line-height: 1.2; color: var(--ink-2); }
 .qc { position: absolute; top: 6px; right: 6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--c); color: #fff; font-size: 10.5px; font-weight: 750; display: grid; place-items: center; }
