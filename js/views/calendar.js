@@ -13,7 +13,17 @@ const ui = { y: null, m: null, sel: null, layers: { trackers: true, one: true, h
 // trackers hidden from the month grid (remembered)
 const hiddenTrackers = () => new Set(settings().calHidden || []);
 
-export const trackers = () => list('trackers').filter(t => !t.archived).sort((a, b) => a.created - b.created);
+const byCreated = (a, b) => a.created - b.created;
+export const trackers = () => list('trackers').filter(t => !t.archived).sort(byCreated);
+// stopped trackers keep their history (dots, stats) but no longer appear as tiles to log
+const stoppedTrackers = () => list('trackers').filter(t => t.archived).sort((a, b) => (b.archivedAt || 0) - (a.archivedAt || 0));
+
+export function setTracking(t, on) {
+  save('trackers', { ...get('trackers', t.id), archived: !on, archivedAt: on ? null : Date.now() });
+  haptic(8);
+  if (!on) toast(`Stopped tracking ${t.name} — history kept`, { action: 'Undo', onAction: () => { setTracking(t, true); rerender(); } });
+  else toast(`Tracking ${t.name} again`);
+}
 export const eventsOn = day => list('events').filter(e => e.date === day).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
 const eventsOf = tid => list('events').filter(e => e.trackerId === tid).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
@@ -45,10 +55,10 @@ export function logEvent(trackerId, { date = today(), time = hm(), note = '' } =
 
 // ---------- tracking tiles: tap to log/unlog a tracker for a day, hold for time & note ----------
 export function trackTiles(day) {
-  const ts = trackers();
+  const evs = eventsOn(day);
+  const ts = [...trackers(), ...stoppedTrackers().filter(x => evs.some(e => e.trackerId === x.id))];
   if (!ts.length) return `<p class="muted small">Make trackers for things that happen regularly — sunsets, workouts, calls home — and log them with one tap.</p>
     <button class="btn ghost sm" data-act="newtracker">${icon('plus')}Create a tracker</button>`;
-  const evs = eventsOn(day);
   return `<div class="quick-grid">${ts.map(x => {
     const mine = evs.filter(e => e.trackerId === x.id);
     const time = mine.find(e => e.time)?.time;
@@ -83,6 +93,8 @@ function trackMenu(btn, after) {
     mine.length ? { label: 'Remove', icon: 'trash', danger: true, action: () => { toggleTrack(tid, day); after(); } } : null,
     '-',
     { label: `${t.name} stats`, icon: 'history', action: () => trackerDetail(t) },
+    t.archived ? { label: 'Resume tracking', icon: 'restore', action: () => { setTracking(t, true); after(); } }
+      : { label: 'Stop tracking', icon: 'archive', action: () => { setTracking(t, false); after(); } },
   ]);
 }
 
@@ -121,8 +133,9 @@ function monthGrid() {
   const t = today();
   const tmap = new Map(list('trackers').map(x => [x.id, x]));
   const hidden = hiddenTrackers();
-  const order = new Map(trackers().map((x, i) => [x.id, i]));
-  const visible = trackers().filter(x => !hidden.has(x.id));
+  const all = [...trackers(), ...stoppedTrackers()];
+  const order = new Map(all.map((x, i) => [x.id, i]));
+  const visible = all.filter(x => !hidden.has(x.id));
   const solo = visible.length === 1 && order.size > 1 ? visible[0] : null; // only one shown: tint its days
   const byDay = new Map(); // day -> Set of tracker ids
   list('events').forEach(e => {
@@ -191,14 +204,16 @@ export function renderCalendar(main, params, query) {
           <button class="icon-btn" data-act="next" aria-label="Next month">${icon('chevR')}</button>
           <button class="btn ghost sm" data-act="today">Today</button>
         </div>
-        ${ts.length ? (() => {
+        ${(() => {
           const hidden = hiddenTrackers();
           const ym = `${ui.y}-${String(ui.m + 1).padStart(2, '0')}`;
           const count = id => new Set(list('events').filter(e => e.trackerId === id && e.date.startsWith(ym)).map(e => e.date)).size;
-          return `<div class="chip-row" role="group" aria-label="Show trackers">${ts.map(x => `<button class="chip track-chip ${hidden.has(x.id) ? 'off' : ''}" data-toggle-tracker="${x.id}" aria-pressed="${!hidden.has(x.id)}" style="--c:${x.color}">
+          const chips = [...ts, ...stoppedTrackers().filter(x => count(x.id))];
+          if (!chips.length) return '';
+          return `<div class="chip-row" role="group" aria-label="Show trackers">${chips.map(x => `<button class="chip track-chip ${hidden.has(x.id) ? 'off' : ''}" data-toggle-tracker="${x.id}" aria-pressed="${!hidden.has(x.id)}" style="--c:${x.color}">
             <i class="dot"></i>${esc(x.emoji)} ${esc(x.name)}<span class="chip-count">${count(x.id)}</span></button>`).join('')}
             ${hidden.size ? `<button class="chip ghost" data-show-all>Show all</button>` : ''}</div>`;
-        })() : ''}
+        })()}
         ${monthGrid()}
         <div class="cal-legend muted small"><span>${icon('target')}one thing done</span><span>${icon('flame')}all habits done</span></div>
       </div>
@@ -212,6 +227,10 @@ export function renderCalendar(main, params, query) {
         <div class="tracker-meta muted small">${s.month} this month · ${s.total} total${s.avg ? ` · every ~${s.avg}d` : ''}</div>
       </button>`; }).join('')}</div>`
       : `<div class="empty card pad">${icon('calendar', 'empty-ic')}<h3>Track what happens regularly</h3><p>Sunsets, workouts, calls with mom, the gym, migraines, dates, anything. Log it with one tap and see patterns over time.</p><button class="btn primary" data-act="newtracker">${icon('plus')}Create a tracker</button></div>`}
+      ${stoppedTrackers().length ? `<h4 class="sub-label">Stopped</h4><div class="card list-card">${stoppedTrackers().map(x => `<button class="list-row stopped-row" data-tracker="${x.id}">
+        <span class="ev-badge" style="--c:${x.color}">${esc(x.emoji)}</span>
+        <span class="grow"><span class="stopped-name">${esc(x.name)}</span><span class="muted small">${trackerStats(x).total} logged${x.archivedAt ? ` · stopped ${fmtDay(ymd(new Date(x.archivedAt)), { month: 'short', day: 'numeric' })}` : ''}</span></span>
+        <span class="link small">Resume</span></button>`).join('')}</div>` : ''}
     </section>
   </div>`;
   const page = main.querySelector('.page');
@@ -339,11 +358,18 @@ function trackerDetail(t) {
           <div class="stat"><div class="stat-n">${s.avg ?? '—'}</div><div class="stat-l">Avg gap (d)</div></div>
         </div>
         <div class="card pad">${heatmap(d => Math.min(4, (days.get(d) || 0) * 2), { weeks: 26, color: t.color, title: d => `${fmtDay(d)}: ${days.get(d) || 0}` })}</div>
-        <button class="btn primary block" data-lognow>${icon('plus')}Log ${esc(t.name)} now</button>
+        ${t.archived ? `<button class="btn primary block" data-resume>${icon('restore')}Resume tracking</button>` : `<button class="btn primary block" data-lognow>${icon('plus')}Log ${esc(t.name)} now</button>`}
         <h4 class="sub-label">Recent</h4>
         ${recent.length ? `<div class="card list-card">${recent.map(e => `<a class="list-row" href="#/calendar?day=${e.date}" data-close-go><div class="grow"><b>${fmtDay(e.date)}</b> <span class="muted small">${e.time || ''} · ${relDays(e.date)}</span>${e.note ? `<div class="muted small">${esc(e.note)}</div>` : ''}</div>${icon('chevR')}</a>`).join('')}</div>` : '<p class="muted">No entries yet.</p>'}
-        <div class="row-between" style="margin-top:16px"><button class="btn ghost danger" data-del>${icon('trash')}Delete tracker</button><button class="btn ghost" data-edit>${icon('edit')}Edit</button></div>`;
-      body.querySelector('[data-lognow]').onclick = () => { logEvent(t.id); close(); rerender(); };
+        <div class="tracker-actions">
+          ${t.archived ? '' : `<button class="btn ghost" data-stop>${icon('archive')}Stop tracking</button>`}
+          <button class="btn ghost" data-edit>${icon('edit')}Edit</button>
+          <button class="btn ghost danger" data-del>${icon('trash')}Delete</button>
+        </div>
+        <p class="muted small">${t.archived ? 'Stopped trackers keep their history and dots, but don’t show up as tiles to log.' : 'Stop tracking hides it from your daily tiles but keeps its history. Delete erases every entry.'}</p>`;
+      body.querySelector('[data-lognow]')?.addEventListener('click', () => { logEvent(t.id); close(); rerender(); });
+      body.querySelector('[data-resume]')?.addEventListener('click', () => { setTracking(t, true); close(); rerender(); });
+      body.querySelector('[data-stop]')?.addEventListener('click', () => { setTracking(t, false); close(); rerender(); });
       body.querySelector('[data-edit]').onclick = () => { close(); trackerSheet(t); };
       body.querySelectorAll('[data-close-go]').forEach(a => a.addEventListener('click', () => close()));
       body.querySelector('[data-del]').onclick = async () => {

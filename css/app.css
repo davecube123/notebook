@@ -585,6 +585,11 @@ body.in-editor #toast { bottom: 80px; }
 .tracker-emoji { font-size: 20px; }
 .tracker-name { font-weight: 600; color: var(--c); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tracker-big { font-size: 28px; font-weight: 600; letter-spacing: -.02em; margin: 8px 0 2px; }
+.tracker-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
+.stopped-row { width: 100%; text-align: left; }
+.stopped-row .grow { display: flex; flex-direction: column; }
+.stopped-name { color: var(--muted); }
+.stopped-row .ev-badge { filter: grayscale(.7); opacity: .7; }
 .tracker-big small { font-size: 13px; font-weight: 600; color: var(--muted); margin-left: 3px; }
 
 /* ---------- today ---------- */

@@ -71,6 +71,7 @@ export function sheet({ title = '', render, onClose, wide = false, className = '
   wrap.querySelector('[data-close]')?.addEventListener('click', () => close());
   const unregister = openOverlay(close);
   render(body, close);
+  body.querySelectorAll('.hm-scroll').forEach(s => { s.scrollLeft = s.scrollWidth; }); // heat grids start at the latest weeks
   requestAnimationFrame(() => wrap.classList.add('open'));
   setTimeout(() => body.querySelector('[autofocus]')?.focus(), 60);
 
