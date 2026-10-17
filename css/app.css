@@ -87,7 +87,7 @@ mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1
 .row { display: flex; gap: 8px; align-items: center; }
 .row-end { display: flex; gap: 8px; justify-content: flex-end; align-items: center; flex-wrap: wrap; }
 .row-between { display: flex; gap: 8px; justify-content: space-between; align-items: center; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
 
 /* ---------- layout ---------- */
 #app { display: flex; height: 100dvh; }
@@ -132,6 +132,10 @@ body.in-editor #tabbar { display: none; }
 .side-link em { margin-left: auto; font-style: normal; color: var(--faint); font-size: 12px; }
 .side-label { font-size: 12px; font-weight: 600; color: var(--muted); padding: 20px 10px 4px; }
 .side-foot { margin-top: auto; padding-top: 12px; }
+.install-card { margin-bottom: 14px; }
+.install-card .card-head { margin-bottom: 4px; }
+.install-action { margin-top: 12px; }
+.list-row .btn { flex: none; }
 .app-version { font-size: 12px; color: var(--muted); text-align: center; padding: 10px 10px 4px; }
 .side-foot .app-version { text-align: left; padding: 6px 10px 0; }
 
@@ -407,7 +411,7 @@ body.in-editor #toast { bottom: 80px; }
 .one-eyebrow .ic { display: none; }
 .one-eyebrow span { color: var(--good); }
 .one-form { display: flex; gap: 8px; }
-.one-input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: 600 22px/1.3 var(--font); letter-spacing: -.02em; color: var(--ink); padding: 6px 0; }
+.one-input { flex: 1; width: 0; min-width: 0; border: 0; outline: 0; background: transparent; font: 600 22px/1.3 var(--font); letter-spacing: -.02em; color: var(--ink); padding: 6px 0; }
 .one-input::placeholder { color: var(--faint); font-weight: 500; }
 .one-form .btn { width: 44px; padding: 0; height: 44px; border-radius: 50%; }
 .one-hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
@@ -566,9 +570,9 @@ body.in-editor #toast { bottom: 80px; }
 
 /* ---------- today ---------- */
 .today-page { max-width: 1080px; }
-.today-grid { display: grid; gap: 14px; }
+.today-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
 .today-grid .col > * + * { margin-top: 14px; }
-@media (min-width: 1000px) { .today-grid { grid-template-columns: 1.1fr 1fr; align-items: start; } }
+@media (min-width: 1000px) { .today-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; } }
 .quick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
 .quick-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px 10px; border-radius: var(--radius); background: var(--fill-2); transition: background .15s, opacity .1s; }
 .quick-btn:active { opacity: .6; }
@@ -646,6 +650,7 @@ body.in-editor #toast { bottom: 80px; }
 input[type="range"] { width: 100%; accent-color: var(--accent); margin: 6px 0 2px; }
 input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .log-form { display: grid; gap: 10px; margin-bottom: 18px; }
+.log-form .row-between { flex-wrap: wrap; }
 .mood-pick { display: flex; gap: 2px; }
 .mood-pick button { width: 34px; height: 34px; border-radius: 9px; font-size: 18px; opacity: .55; transition: all .12s; }
 .mood-pick button.on { opacity: 1; background: var(--fill); }

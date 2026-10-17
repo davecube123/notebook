@@ -2,7 +2,7 @@
 import { loadAll, settings, list, subscribe } from './db.js';
 import { esc, today, fmtShort, fmtDay, snippet, highlight, sha256, debounce, $ } from './util.js';
 import { icon } from './icons.js';
-import { route, resolve, navigate, rerender, parseHash } from './router.js';
+import { route, resolve, navigate, rerender, parseHash, currentRoute } from './router.js';
 import { sheet, closeTopSheet, hasOpenSheet, toast } from './ui.js';
 import { renderToday } from './views/today.js';
 import { renderNotes, newNote, noteTitle } from './views/notes.js';
@@ -12,8 +12,8 @@ import { renderPeople, avatar } from './views/people.js';
 import { renderHabits } from './views/habits.js';
 import { renderSettings } from './views/settings.js';
 import { APP_VERSION } from './version.js';
+import './install.js';
 
-export const installPrompt = { event: null };
 
 const NAV = [
   ['today', 'Today', 'today', '#/today'],
@@ -182,6 +182,7 @@ async function boot() {
   document.addEventListener('open-search', openSearch);
   document.addEventListener('click', e => { if (e.target.closest('[data-open-search]')) openSearch(); });
   document.addEventListener('lock-now', () => showLock());
+  document.addEventListener('install-available', () => { if (['today', 'settings'].includes(currentRoute()?.r.name)) rerender(); });
   subscribe(store => { if (store === '*') { applyTheme(); rerender(); } });
 
   // When the date rolls over while the app is open (or resumes the next day), refresh
@@ -209,7 +210,5 @@ async function boot() {
   }
 }
 
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt.event = e; });
-window.addEventListener('appinstalled', () => { installPrompt.event = null; toast('Installed — find Almanac on your home screen'); });
 
 boot();

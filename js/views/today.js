@@ -8,6 +8,7 @@ import { habitsCard, bindHabits } from './habits.js';
 import { trackers, trackerStats, logEvent, eventsOn } from './calendar.js';
 import { newNote, noteTitle } from './notes.js';
 import { nextBirthday, reconnectDue, avatar } from './people.js';
+import { installCard, bindInstall } from '../install.js';
 
 const QUOTES = [
   ['What you do every day matters more than what you do once in a while.', 'Gretchen Rubin'],
@@ -48,6 +49,7 @@ export function renderToday(main) {
         <a class="icon-btn" href="#/settings" aria-label="Settings">${icon('settings')}</a></div>
     </header>
 
+    ${installCard()}
     <div class="today-grid">
       <div class="col">
         ${oneThingCard(t, { big: true })}
@@ -87,6 +89,7 @@ export function renderToday(main) {
   const page = main.querySelector('.page');
   bindOneThing(page);
   bindHabits(page);
+  bindInstall(page, rerender);
   page.addEventListener('click', e => {
     const lg = e.target.closest('[data-log]');
     if (lg) { logEvent(lg.dataset.log); rerender(); return; }

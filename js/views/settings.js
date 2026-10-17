@@ -4,7 +4,8 @@ import { esc, download, sha256, today } from '../util.js';
 import { icon } from '../icons.js';
 import { rerender } from '../router.js';
 import { toast, confirmDialog, promptDialog } from '../ui.js';
-import { applyTheme, installPrompt } from '../app.js';
+import { applyTheme } from '../app.js';
+import { installRow, bindInstall } from '../install.js';
 import { APP_VERSION } from '../version.js';
 
 // Apple system colors
@@ -43,7 +44,7 @@ export function renderSettings(main) {
         <div class="list-row"><span class="grow">Back up<div class="muted small">Download everything as a single file. Do this now and then.${st.lastBackup ? ` Last: ${esc(st.lastBackup)}.` : ''}</div></span><button class="btn ghost sm" data-act="export">${icon('download')}Export</button></div>
         <label class="list-row"><span class="grow">Restore<div class="muted small">Merge a backup file into this device.</div></span><span class="btn ghost sm">${icon('upload')}Import<input type="file" accept="application/json,.json" hidden data-import></span></label>
         <div class="list-row"><span class="grow">Keep data safe<div class="muted small">Ask the browser not to clear storage when space is low.</div></span><button class="btn ghost sm" data-act="persist">Protect</button></div>
-        <div class="list-row install-row" hidden><span class="grow">Install app<div class="muted small">Add to your home screen for a full-screen, offline app.</div></span><button class="btn primary sm" data-act="install">${icon('install')}Install</button></div>
+        ${installRow()}
         <div class="list-row"><span class="grow danger-text">Erase everything</span><button class="btn danger sm" data-act="wipe">Erase</button></div>
       </div></section>
 
@@ -63,7 +64,7 @@ export function renderSettings(main) {
     page.querySelector('.storage-line').textContent = `${(e.usage / 1048576).toFixed(1)} MB used${persisted ? ' · protected from automatic clearing' : ''}`;
   });
   else page.querySelector('.storage-line').textContent = '';
-  if (installPrompt.event) page.querySelector('.install-row').hidden = false;
+  bindInstall(page, rerender);
 
   page.addEventListener('change', async e => {
     const k = e.target.dataset.set;
@@ -92,7 +93,6 @@ export function renderSettings(main) {
         const ok = await navigator.storage?.persist?.();
         toast(ok ? 'Storage protected' : 'Your browser decides this — installing the app usually helps'); rerender(); break;
       }
-      case 'install': installPrompt.event?.prompt(); break;
       case 'wipe':
         if (await confirmDialog('Delete all notes, people, habits, logs and settings from this device? Export a backup first if unsure.', { ok: 'Erase everything' })) {
           await wipeAll(); toast('Everything erased'); rerender();
