@@ -169,7 +169,58 @@ function emptyState() {
   return `<div class="empty">${icon('notes', 'empty-ic')}<h3>Your notebook is empty</h3><p>Capture a thought, a list, a quote. Tag it so you can find it later.</p><button class="btn primary" data-act="new">${icon('plus')}New note</button></div>`;
 }
 
+// The word being typed at the caret in the search box, e.g. "#lak" or "lak"
+function tokenAtCaret(input) {
+  const pos = input.selectionStart ?? input.value.length;
+  const m = input.value.slice(0, pos).match(/(^|\s)(#?[\w/-]*)$/);
+  return m ? { text: m[2], start: pos - m[2].length, end: pos } : null;
+}
+
+// "#" lists every tag; "#la" or a plain "la" (2+ letters) lists matching tags, prefix matches first
+function tagSuggestions(tok) {
+  if (!tok) return [];
+  const hash = tok.text.startsWith('#');
+  const q = normTag(tok.text);
+  if (!hash && q.length < 2) return [];
+  const used = new Set(parseQuery(ui.q).tags.concat(ui.tags));
+  return allTags()
+    .filter(([t]) => (!q || t.includes(q)) && !(used.has(t) && t === q))
+    .sort((a, b) => (b[0].startsWith(q) - a[0].startsWith(q)) || b[1] - a[1])
+    .slice(0, 6);
+}
+
 function bindList(root, activeId) {
+  const sug = { items: [], sel: null, tok: null };
+  const closeSuggest = () => { root.querySelector('.search-suggest')?.remove(); sug.items = []; };
+  const showSuggest = () => {
+    const input = root.querySelector('#note-search');
+    closeSuggest();
+    if (!input || document.activeElement !== input) return;
+    sug.tok = tokenAtCaret(input);
+    sug.items = tagSuggestions(sug.tok);
+    // after "#" the top tag is preselected; for a plain word nothing is, so Enter still searches the text
+    if (!sug.items.length) { sug.sel = null; return; }
+    if (sug.sel === null) sug.sel = sug.tok.text.startsWith('#') ? 0 : -1;
+    sug.sel = Math.min(sug.sel, sug.items.length - 1);
+    const field = input.closest('.search-field');
+    field.insertAdjacentHTML('afterend', `<div class="search-suggest" role="listbox" aria-label="Tags"
+      style="top:${field.offsetTop + field.offsetHeight + 6}px;left:${field.offsetLeft}px;width:${field.offsetWidth}px">
+      ${sug.items.map(([t, c], i) => `<button type="button" role="option" class="${i === sug.sel ? 'sel' : ''}" aria-selected="${i === sug.sel}" data-sugtag="${esc(t)}">
+        ${icon('tag')}<span class="grow">${highlight('#' + t, normTag(sug.tok.text))}</span><span class="muted small">${c}</span></button>`).join('')}
+    </div>`);
+  };
+  const pickTag = t => {
+    const input = root.querySelector('#note-search');
+    const { start, end } = sug.tok;
+    const after = input.value.slice(end).replace(/^[^\s]*/, '');
+    const insert = `#${t} `;
+    ui.q = input.value.slice(0, start) + insert + after.replace(/^\s+/, '');
+    sug.sel = null;
+    refreshList();
+    const s = root.querySelector('#note-search');
+    s.setSelectionRange(start + insert.length, start + insert.length); s.focus();
+    closeSuggest();
+  };
   const refreshList = () => {
     const wrap = root.querySelector('.notes-list-pane') || root;
     const st = wrap.scrollTop;
@@ -177,11 +228,32 @@ function bindList(root, activeId) {
     const caret = searchFocused ? document.activeElement.selectionStart : null;
     wrap.innerHTML = listHTML(activeId);
     wrap.scrollTop = st;
-    if (searchFocused) { const s = wrap.querySelector('#note-search'); s.focus(); s.setSelectionRange(caret, caret); }
+    if (searchFocused) { const s = wrap.querySelector('#note-search'); s.setSelectionRange(caret, caret); s.focus(); showSuggest(); }
   };
   const onSearch = debounce(() => refreshList(), 120);
-  root.addEventListener('input', e => { if (e.target.id === 'note-search') { ui.q = e.target.value; onSearch(); } });
+  root.addEventListener('input', e => { if (e.target.id === 'note-search') { ui.q = e.target.value; sug.sel = null; showSuggest(); onSearch(); } });
+  root.addEventListener('focusin', e => { if (e.target.id === 'note-search') showSuggest(); });
+  root.addEventListener('focusout', e => { if (e.target.id === 'note-search') setTimeout(() => { if (document.activeElement?.id !== 'note-search') closeSuggest(); }, 120); });
+  root.addEventListener('keyup', e => { if (e.target.id === 'note-search' && /^Arrow(Left|Right)$|^Home$|^End$/.test(e.key)) showSuggest(); });
+  root.addEventListener('keydown', e => {
+    if (e.target.id !== 'note-search' || !sug.items.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      sug.sel = sug.sel < 0 && e.key === 'ArrowUp' ? sug.items.length - 1 : (sug.sel + (e.key === 'ArrowDown' ? 1 : -1) + sug.items.length) % sug.items.length;
+      showSuggest();
+    } else if ((e.key === 'Enter' || e.key === 'Tab') && sug.sel >= 0) {
+      e.preventDefault(); pickTag(sug.items[sug.sel][0]);
+    } else if (e.key === 'Enter') {
+      closeSuggest();
+    } else if (e.key === 'Escape') {
+      e.preventDefault(); e.stopPropagation(); closeSuggest();
+    }
+  });
+  // keep focus in the search box while tapping a suggestion
+  root.addEventListener('pointerdown', e => { if (e.target.closest('[data-sugtag]')) e.preventDefault(); });
   root.addEventListener('click', async e => {
+    const st = e.target.closest('[data-sugtag]');
+    if (st) return pickTag(st.dataset.sugtag);
     const tagBtn = e.target.closest('[data-tag]');
     if (tagBtn) {
       const t = tagBtn.dataset.tag;

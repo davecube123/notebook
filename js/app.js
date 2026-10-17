@@ -72,9 +72,11 @@ function openSearch() {
         if (!q) { out.innerHTML = `<p class="muted small pad-x">Tip: type <b>#tag</b> to jump to tagged notes.</p>`; return; }
         const res = [];
         const tagQ = q.startsWith('#') ? q.slice(1) : null;
-        if (tagQ) {
-          const tags = new Set(); list('notes').forEach(n => !n.trashed && (n.tags || []).forEach(t => t.includes(tagQ) && tags.add(t)));
-          [...tags].slice(0, 8).forEach(t => res.push({ k: 'Tag', href: `#/notes?tag=${encodeURIComponent(t)}`, html: `<span class="tag-chip">#${esc(t)}</span>` }));
+        const tq = tagQ ?? q;
+        if (tagQ !== null || q.length >= 2) {
+          const tags = new Set(); list('notes').forEach(n => !n.trashed && (n.tags || []).forEach(t => t.includes(tq) && tags.add(t)));
+          [...tags].sort((a, b) => b.startsWith(tq) - a.startsWith(tq)).slice(0, tagQ !== null ? 8 : 3)
+            .forEach(t => res.push({ k: 'Tag', href: `#/notes?tag=${encodeURIComponent(t)}`, html: `<span class="tag-chip">#${esc(t)}</span>` }));
         }
         list('notes').filter(n => !n.trashed && !n.draft && (n.title + ' ' + n.text + ' ' + (n.tags || []).join(' ')).toLowerCase().includes(tagQ ?? q))
           .sort((a, b) => b.updated - a.updated).slice(0, 8)

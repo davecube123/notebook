@@ -200,6 +200,11 @@ select.input.inline { padding-right: 28px; }
 .search-field .ic { width: 18px; height: 18px; }
 .search-field input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 17px; }
 .search-field input::-webkit-search-cancel-button { display: none; }
+.search-suggest { position: absolute; z-index: 30; padding: 5px; border-radius: 13px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: saturate(1.8) blur(24px); -webkit-backdrop-filter: saturate(1.8) blur(24px); box-shadow: var(--shadow-lg); }
+.search-suggest button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border-radius: 8px; font-size: 16px; text-align: left; color: var(--accent); }
+.search-suggest button .ic { width: 16px; height: 16px; color: var(--muted); }
+.search-suggest button.sel, .search-suggest button:hover { background: var(--fill); }
+.search-suggest mark { background: none; color: inherit; font-weight: 600; padding: 0; }
 
 .search-field.big { height: 50px; font-size: 17px; margin: 0 0 8px; }
 .clear-btn { width: 22px; height: 22px; border-radius: 50%; background: var(--faint); color: var(--surface); display: grid; place-items: center; }
