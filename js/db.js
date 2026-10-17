@@ -82,7 +82,7 @@ export function uid() {
 const DEFAULT_SETTINGS = {
   id: 'settings',
   theme: 'system',
-  accent: '#E0583A',
+  accent: '#007AFF',
   weekStart: 1,
   name: '',
   hiddenPersonFields: [],
@@ -92,7 +92,10 @@ const DEFAULT_SETTINGS = {
   noteGroup: 'date',
 };
 export function settings() {
-  return { ...DEFAULT_SETTINGS, ...(state.meta.get('settings') || {}) };
+  const saved = state.meta.get('settings') || {};
+  // the pre-minimal default accent becomes the new system blue
+  const accent = saved.accent === '#E0583A' ? DEFAULT_SETTINGS.accent : saved.accent;
+  return { ...DEFAULT_SETTINGS, ...saved, ...(accent ? { accent } : {}) };
 }
 export function setSettings(patch) {
   return save('meta', { ...settings(), ...patch });

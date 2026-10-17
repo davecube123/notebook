@@ -92,8 +92,8 @@ export function initials(name) {
   return ((parts[0]?.[0] || '') + (parts.length > 1 ? parts.at(-1)[0] : '')).toUpperCase() || '?';
 }
 
-// Stable pleasant color from a string
-const PALETTE = ['#E0583A', '#D9822B', '#C9A227', '#5B9A47', '#2F9C8F', '#3A7BD5', '#6A5ACD', '#A35CC8', '#D0508A', '#7A8794'];
+// Stable color (Apple system palette) from a string
+const PALETTE = ['#007AFF', '#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#30B0C7', '#5856D6', '#FFCC00', '#FF3B30', '#8E8E93'];
 export function colorFor(str) {
   let h = 0;
   for (const c of String(str)) h = (h * 31 + c.charCodeAt(0)) >>> 0;

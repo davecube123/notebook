@@ -1,5 +1,5 @@
 // Offline-first service worker. Bump VERSION when shipping changes.
-const VERSION = 'almanac-v1';
+const VERSION = 'almanac-v2';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/db.js', 'js/util.js', 'js/ui.js', 'js/icons.js', 'js/router.js',

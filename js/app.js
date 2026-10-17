@@ -54,7 +54,7 @@ export function applyTheme() {
   root.style.setProperty('--accent', st.accent);
   try { localStorage.setItem('almanac-theme', st.theme); localStorage.setItem('almanac-accent', st.accent); } catch {}
   const dark = st.theme === 'dark' || (st.theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute('content', dark ? '#151413' : '#FAF8F4'));
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m => m.setAttribute('content', dark ? '#000000' : '#F2F2F7'));
 }
 
 // ---------- global search (⌘K) ----------

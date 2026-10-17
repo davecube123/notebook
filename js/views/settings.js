@@ -6,7 +6,8 @@ import { rerender } from '../router.js';
 import { toast, confirmDialog, promptDialog } from '../ui.js';
 import { applyTheme, installPrompt } from '../app.js';
 
-const ACCENTS = ['#E0583A', '#D9822B', '#C9A227', '#5B9A47', '#2F9C8F', '#3A7BD5', '#6A5ACD', '#D0508A', '#1C1B19'];
+// Apple system colors
+const ACCENTS = ['#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#30B0C7', '#8E8E93'];
 
 export function renderSettings(main) {
   const st = settings();
