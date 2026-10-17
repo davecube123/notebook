@@ -11,6 +11,7 @@ import { renderCalendar } from './views/calendar.js';
 import { renderPeople, avatar } from './views/people.js';
 import { renderHabits } from './views/habits.js';
 import { renderSettings } from './views/settings.js';
+import { APP_VERSION } from './version.js';
 
 export const installPrompt = { event: null };
 
@@ -30,7 +31,7 @@ function renderShell() {
     <button class="side-search" data-open-search>${icon('search')}<span>Search</span><kbd>/</kbd></button>
     ${NAV.map(([k, l, ic, href]) => `<a class="side-link" data-nav="${k}" href="${href}">${icon(ic)}<span>${l}</span></a>`).join('')}
     <div class="side-tags"></div>
-    <div class="side-foot"><a class="side-link" data-nav="settings" href="#/settings">${icon('settings')}<span>Settings</span></a></div>`;
+    <div class="side-foot"><a class="side-link" data-nav="settings" href="#/settings">${icon('settings')}<span>Settings</span></a><div class="app-version">Version ${APP_VERSION}</div></div>`;
   $('#tabbar').innerHTML = TABS.map(k => { const [, l, ic, href] = NAV.find(n => n[0] === k); return `<a class="tab" data-nav="${k}" href="${href}">${icon(ic)}<span>${l}</span></a>`; }).join('');
 }
 

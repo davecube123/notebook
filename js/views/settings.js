@@ -5,6 +5,7 @@ import { icon } from '../icons.js';
 import { rerender } from '../router.js';
 import { toast, confirmDialog, promptDialog } from '../ui.js';
 import { applyTheme, installPrompt } from '../app.js';
+import { APP_VERSION } from '../version.js';
 
 // Apple system colors
 const ACCENTS = ['#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#30B0C7', '#8E8E93'];
@@ -53,7 +54,7 @@ export function renderSettings(main) {
         <div>In notes: <kbd>[ ]</kbd> checklist · <kbd>-</kbd> bullet · <kbd>1.</kbd> numbered · <kbd>&gt;</kbd> quote · <kbd>#</kbd> heading · <kbd>\`\`\`</kbd> code · <kbd>---</kbd> divider, each followed by a space</div>
         <div><kbd>⌘B</kbd> <kbd>⌘I</kbd> <kbd>⌘U</kbd> <kbd>⌘K</kbd> link · <kbd>⌘⇧C</kbd> checklist · <kbd>Tab</kbd> indent list</div>
       </div></section>
-    <p class="muted small center">Almanac · works offline · v1</p>
+    <p class="app-version">Almanac · Version ${APP_VERSION}</p>
   </div>`;
   const page = main.querySelector('.page');
 
