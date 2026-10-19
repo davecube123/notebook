@@ -10,8 +10,9 @@ import { isPerfect, habitsOn, logFor } from './habits.js';
 import { noteTitle } from './notes.js';
 
 const ui = { y: null, m: null, sel: null, layers: { trackers: true, one: true, habits: true, notes: false } };
-// trackers hidden from the month grid (remembered)
-const hiddenTrackers = () => new Set(settings().calHidden || []);
+// trackers picked to show on the month grid (remembered); none picked = show them all
+const shownTrackers = () => new Set(settings().calShown || []);
+const isShown = (shown, id) => !shown.size || shown.has(id);
 
 const byCreated = (a, b) => a.created - b.created;
 export const trackers = () => list('trackers').filter(t => !t.archived).sort(byCreated);
@@ -132,14 +133,14 @@ function monthGrid() {
   const start = addDays(ymd(first), -lead);
   const t = today();
   const tmap = new Map(list('trackers').map(x => [x.id, x]));
-  const hidden = hiddenTrackers();
+  const shown = shownTrackers();
   const all = [...trackers(), ...stoppedTrackers()];
   const order = new Map(all.map((x, i) => [x.id, i]));
-  const visible = all.filter(x => !hidden.has(x.id));
+  const visible = all.filter(x => isShown(shown, x.id));
   const solo = visible.length === 1 && order.size > 1 ? visible[0] : null; // only one shown: tint its days
   const byDay = new Map(); // day -> Set of tracker ids
   list('events').forEach(e => {
-    if (hidden.has(e.trackerId) || !order.has(e.trackerId)) return;
+    if (!order.has(e.trackerId) || !isShown(shown, e.trackerId)) return;
     if (!byDay.has(e.date)) byDay.set(e.date, new Set());
     byDay.get(e.date).add(e.trackerId);
   });
@@ -205,14 +206,16 @@ export function renderCalendar(main, params, query) {
           <button class="btn ghost sm" data-act="today">Today</button>
         </div>
         ${(() => {
-          const hidden = hiddenTrackers();
+          const shown = shownTrackers();
           const ym = `${ui.y}-${String(ui.m + 1).padStart(2, '0')}`;
           const count = id => new Set(list('events').filter(e => e.trackerId === id && e.date.startsWith(ym)).map(e => e.date)).size;
           const chips = [...ts, ...stoppedTrackers().filter(x => count(x.id))];
           if (!chips.length) return '';
-          return `<div class="chip-row" role="group" aria-label="Show trackers">${chips.map(x => `<button class="chip track-chip ${hidden.has(x.id) ? 'off' : ''}" data-toggle-tracker="${x.id}" aria-pressed="${!hidden.has(x.id)}" style="--c:${x.color}">
+          return `<div class="chip-row" role="group" aria-label="Trackers to show">
+            <button class="chip ${shown.size ? '' : 'on'}" data-show-all aria-pressed="${!shown.size}">All</button>
+            ${chips.map(x => `<button class="chip track-chip ${shown.has(x.id) ? 'picked' : shown.size ? 'off' : ''}" data-toggle-tracker="${x.id}" aria-pressed="${shown.has(x.id)}" style="--c:${x.color}">
             <i class="dot"></i>${esc(x.emoji)} ${esc(x.name)}<span class="chip-count">${count(x.id)}</span></button>`).join('')}
-            ${hidden.size ? `<button class="chip ghost" data-show-all>Show all</button>` : ''}</div>`;
+          </div>`;
         })()}
         ${monthGrid()}
         <div class="cal-legend muted small"><span>${icon('target')}one thing done</span><span>${icon('flame')}all habits done</span></div>
@@ -263,12 +266,14 @@ export function renderCalendar(main, params, query) {
     }
     const tg = e.target.closest('[data-toggle-tracker]');
     if (tg) {
-      const hidden = hiddenTrackers(), id = tg.dataset.toggleTracker;
-      hidden.has(id) ? hidden.delete(id) : hidden.add(id);
-      setSettings({ calHidden: [...hidden] }); haptic(5);
+      // tap to pick which trackers to see; picking every one is the same as All
+      const shown = shownTrackers(), id = tg.dataset.toggleTracker;
+      shown.has(id) ? shown.delete(id) : shown.add(id);
+      const pickable = tg.parentElement.querySelectorAll('[data-toggle-tracker]').length;
+      setSettings({ calShown: shown.size >= pickable ? [] : [...shown] }); haptic(5);
       return rerender();
     }
-    if (e.target.closest('[data-show-all]')) { setSettings({ calHidden: [] }); return rerender(); }
+    if (e.target.closest('[data-show-all]')) { setSettings({ calShown: [] }); return rerender(); }
     const tr = e.target.closest('[data-tracker]');
     if (tr) return trackerDetail(get('trackers', tr.dataset.tracker));
     const dh = e.target.closest('[data-day-habits]');

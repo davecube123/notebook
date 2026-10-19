@@ -568,6 +568,7 @@ body.in-editor #toast { bottom: 80px; }
 .day-label { font-size: 13px; font-weight: 400; text-transform: uppercase; letter-spacing: 0; color: var(--muted); margin: 0 0 8px; }
 .track-hint { margin-top: 8px; }
 .track-chip .dot { background: var(--c); }
+.track-chip.picked { background: color-mix(in srgb, var(--c) 22%, transparent); box-shadow: inset 0 0 0 1.5px var(--c); }
 .track-chip.off { color: var(--muted); }
 .track-chip.off .dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--c); }
 .track-chip.off .chip-count { opacity: .4; }
