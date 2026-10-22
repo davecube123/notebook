@@ -12,7 +12,7 @@ import {
   TRAITS, LEVEL, traitsOf, TEMPERAMENTS, VARIANTS, QUESTIONS, resolveKeirsey, keirseyOf,
   ENNEA, ENNEA_PARTS, enneaOf, enneaVerdict, ENNEA_TEST, resolveEnnea, enneaNeighbours,
   DEFENSE_LEVELS, DEFENSE, BLUEPRINTS, BP_QUESTIONS, resolveBlueprint, ZODIAC, signFor, nearCusp,
-  TRAIT_RELATE, TEMP_RELATE, ENNEA_RELATE, DEFENSE_RELATE, FACETS,
+  TRAIT_RELATE, TEMP_RELATE, ENNEA_RELATE, DEFENSE_RELATE, FACETS, ENNEA_PROFILE, CENTERS,
 } from './typology-data.js';
 
 const info = (summary, body) => `<details class="ty-info"><summary>${icon('info')}${summary}</summary><div>${body}</div></details>`;
@@ -59,7 +59,7 @@ export function personalityTab(p) {
   const ennea = `${!(en.desire || en.fear || en.passion) ? `<p class="muted small">Answer 2 questions to find their likely type, or pick the desire, fear and passion one by one below.</p><button class="btn primary sm" data-ty="ennea-test">Take the 2-question test</button>` : ''}
     ${ENNEA_PARTS.map(([k, label, idx, hint]) => { const n = en[k]; return `<button class="ty-pick" data-ty="ennea" data-part="${k}"><span class="ty-pick-label">${label}</span><span class="ty-pick-val">${n ? esc(ENNEA[n - 1][idx]) : `<span class="faint">${hint}</span>`}</span>${icon('chevR')}</button>`; }).join('')}
     ${enneaVerdict(en) ? `<p class="ty-verdict">${enneaVerdict(en)}</p>` : ''}
-    ${ennN ? relate(first, [['', ...ENNEA_RELATE[ennN]]]) : ''}
+    ${ennN ? enneaProfileHTML(ennN, p.enneaWing) + relate(first, [['', ...ENNEA_RELATE[ennN]]]) : ''}
     ${en.desire || en.fear || en.passion ? '<div class="row-end"><button class="btn ghost sm" data-ty="ennea-test">Re-test</button></div>' : ''}`;
 
   // Erotic Blueprints
@@ -105,7 +105,7 @@ export function personalityTab(p) {
     <details class="card pad why"><summary><b>Sources</b></summary>
       <p>Costa, P. &amp; McCrae, R. (1992). <i>NEO PI-R Professional Manual.</i> · Vazire, S. (2010). Who knows what about a person? <i>J. Personality &amp; Social Psychology.</i></p>
       <p>Keirsey, D. (1998). <i>Please Understand Me II.</i></p>
-      <p>Riso, D. &amp; Hudson, R. (1999). <i>The Wisdom of the Enneagram</i> (includes the QUEST). · Naranjo, C. (1994). <i>Character and Neurosis.</i></p>
+      <p>Riso, D. &amp; Hudson, R. (1996). <i>Personality Types</i> (rev. ed.). · Riso, D. &amp; Hudson, R. (1999). <i>The Wisdom of the Enneagram</i> (includes the QUEST). · Naranjo, C. (1994). <i>Character and Neurosis.</i> · Palmer, H. (1988). <i>The Enneagram.</i></p>
       <p>Jaiya. <i>Erotic Blueprints</i> (eroticblueprints.com). · Bancroft, J. &amp; Janssen, E. (2000). The dual control model of male sexual response. · Nagoski, E. (2015). <i>Come As You Are.</i></p>
       <p>Vaillant, G. (1992). <i>Ego Mechanisms of Defense.</i> · American Psychiatric Association (1994). <i>DSM-IV</i>, Defensive Functioning Scale.</p>
       <p>Carlson, S. (1985). A double-blind test of astrology. <i>Nature</i> 318.</p>
@@ -122,6 +122,33 @@ function facetsHTML(t, fc, cur) {
       <div class="ty-desc small">${!v ? `<span class="muted">High: ${esc(hi)}. Low: ${esc(lo)}.</span>` : v === 3 ? '<b>Average</b>' : `<b>${LEVEL[v]}:</b> ${esc(v > 3 ? hi : lo)}`}</div></div>`; }).join('')}
     ${rated.length >= 3 && Math.round(avg) !== cur ? `<button class="link small" data-trait="${t.k}" data-v="${Math.round(avg)}">Set ${esc(t.name)} to ${Math.round(avg)}, the facet average</button>` : ''}
   </details>`;
+}
+
+// Full Riso & Hudson profile of the lead type, with the wing you choose
+function enneaProfileHTML(n, wing) {
+  const t = ENNEA_PROFILE[n], c = CENTERS[t.center], name = x => `Type ${x}, ${ENNEA[x - 1][1]}`;
+  const w = t.wings[wing] ? wing : null;
+  const groups = ENNEA_TEST.map(q => q.opts.find(o => o[3].includes(n))[1]);
+  return `<div class="ty-profile">
+    <div class="ty-big">Type ${n} <span class="faint">${esc(ENNEA[n - 1][1])}${w ? ` · ${n}w${w}` : ''}</span></div>
+    <p class="muted small">${esc(t.brief)}</p>
+    <div class="chip-row wrap"><span class="ty-pill">${c[0]} · ${c[1]}</span><span class="ty-pill">${esc(groups[0])}</span><span class="ty-pill">${esc(groups[1])}</span></div>
+    <div class="feel-label">Wing</div>
+    <div class="chip-row wrap">${Object.entries(t.wings).map(([k, l]) => `<button class="chip ${+k === w ? 'on' : ''}" data-ty="ennea-wing" data-wing="${k}">${n}w${k} · ${esc(l)}</button>`).join('')}</div>
+    <p class="muted small">${w ? `${esc(t.wings[w])}: their type ${n} is coloured by type ${w} (${esc(ENNEA[w - 1][1])}): ${esc(ENNEA_PROFILE[w].brief.toLowerCase())}.` : 'The neighbouring type that colours theirs. Pick one if you can tell.'}</p>
+    <dl class="ty-facts">
+      <dt>Key motivations</dt><dd>${esc(t.motives)}</dd>
+      <dt>At their best</dt><dd>${esc(t.healthy)}</dd>
+      <dt>Day to day</dt><dd>${esc(t.average)}</dd>
+      <dt>At their worst</dt><dd>${esc(t.unhealthy)}</dd>
+      <dt>Under stress → ${name(t.stress[0])}</dt><dd>${esc(t.stress[1].charAt(0).toUpperCase() + t.stress[1].slice(1))}.</dd>
+      <dt>In growth → ${name(t.growth[0])}</dt><dd>${esc(t.growth[1].charAt(0).toUpperCase() + t.growth[1].slice(1))}.</dd>
+      <dt>Passion → Virtue</dt><dd>${esc(ENNEA[n - 1][4])} → ${esc(t.virtue)}</dd>
+      <dt>Fixation</dt><dd>${esc(t.fixation)}</dd>
+      <dt>Typical defence</dt><dd>${esc(t.defense)}</dd>
+    </dl>
+    ${info('What these mean', `<p><b>Centre:</b> ${esc(c[2])}</p><p><b>Wing:</b> one of the two neighbouring types on the circle, which adds its flavour.</p><p><b>Stress and growth:</b> under pressure people tend to take on the average traits of one type; as they mature they take on the healthy traits of another (Riso &amp; Hudson’s directions of disintegration and integration).</p><p><b>Best, day to day, worst:</b> condensed from Riso &amp; Hudson’s nine Levels of Development.</p><p><b>Passion → virtue:</b> the emotional habit, and the quality that replaces it as they grow (Ichazo, Naranjo). <b>Fixation</b> is the matching habit of mind.</p>`)}
+  </div>`;
 }
 
 // the type most of the three parts point to (fear breaks ties)
@@ -160,6 +187,7 @@ export function handlePersonality(e, id, redraw) {
   if (act === 'keirsey') keirseySheet(p(), code => { put({ keirsey: code }); redraw(); });
   if (act === 'keirsey-clear') { const prev = keirseyOf(p())?.[0]; put({ keirsey: null, fields: { ...p().fields, mbti: '' } }); redraw(); toast('Cleared', { action: 'Undo', onAction: () => { put({ keirsey: prev }); redraw(); } }); }
   if (act === 'ennea') enneaSheet(p(), b.dataset.part, n => { put({ enneagram: { ...enneaOf(p()), [b.dataset.part]: n } }); redraw(); });
+  if (act === 'ennea-wing') { const w = +b.dataset.wing; put({ enneaWing: p().enneaWing === w ? null : w }); redraw(); }
   if (act === 'ennea-test') enneaTestSheet(p(), n => { put({ enneagram: { desire: n, fear: n, passion: n } }); redraw(); });
   if (act === 'blueprint') blueprintSheet(p(), bp => { put({ blueprint: bp }); redraw(); });
   if (act === 'blueprint-clear') undoable('Cleared', { blueprint: null });
@@ -377,7 +405,12 @@ export function personalityText(p) {
   const kv = keirseyOf(p);
   if (kv) out.push('## Temperament', `${kv[3]} (${kv[0]}), ${TEMPERAMENTS[kv[1]].name} ${kv[2]}`, '');
   const en = enneaOf(p);
-  if (en.desire || en.fear || en.passion) out.push('## Enneagram core', ...ENNEA_PARTS.filter(([k]) => en[k]).map(([k, l, i]) => `- ${l}: ${ENNEA[en[k] - 1][i]} (type ${en[k]})`), '');
+  if (en.desire || en.fear || en.passion) {
+    const n = enneaLead(en), t = n && ENNEA_PROFILE[n], w = t?.wings[p.enneaWing] ? p.enneaWing : null;
+    out.push('## Enneagram', ...(t ? [`Type ${n}, ${ENNEA[n - 1][1]}${w ? ` (${n}w${w}, ${t.wings[w]})` : ''}: ${t.brief}`] : []),
+      ...ENNEA_PARTS.filter(([k]) => en[k]).map(([k, l, i]) => `- ${l}: ${ENNEA[en[k] - 1][i]} (type ${en[k]})`),
+      ...(t ? [`- Under stress → type ${t.stress[0]}: ${t.stress[1]}`, `- In growth → type ${t.growth[0]}: ${t.growth[1]}`] : []), '');
+  }
   const bp = blueprintOf(p), er = p.erotic || {};
   if (bp.primary || er.accNotes || er.brakeNotes) out.push('## Erotic blueprint', ...(bp.primary ? [`- ${BLUEPRINTS[bp.primary].name}${bp.secondary ? ` + ${BLUEPRINTS[bp.secondary].name}` : ''}`] : []), ...(er.accNotes ? [`- Turned on by: ${er.accNotes}`] : []), ...(er.brakeNotes ? [`- Turned off by: ${er.brakeNotes}`] : []), '');
   const defs = (p.defenses || []).filter(k => DEFENSE.has(k));
