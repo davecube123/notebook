@@ -130,6 +130,7 @@ function onKey(e) {
     return;
   }
   if (e.key === 'g') { gPending = true; setTimeout(() => gPending = false, 1200); return; }
+  if (e.key === 'd') { e.preventDefault(); import('./views/templates.js').then(m => m.openDaily()); }
   if (e.key === 'n') { e.preventDefault(); const n = newNote(); navigate(`#/notes/${n.id}`); }
 }
 

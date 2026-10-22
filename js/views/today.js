@@ -7,6 +7,7 @@ import { oneThingCard, bindOneThing } from './onething.js';
 import { habitsCard, bindHabits } from './habits.js';
 import { trackers, trackerStats, trackTiles, bindTrackTiles } from './calendar.js';
 import { newNote, noteTitle } from './notes.js';
+import { openDaily, dailyNote } from './templates.js';
 import { nextBirthday, reconnectDue, avatar } from './people.js';
 import { installCard, bindInstall } from '../install.js';
 import { feelingsCard, bindFeelings } from './feelings.js';
@@ -72,6 +73,7 @@ export function renderToday(main) {
 
         <div class="card pad">
           <div class="card-head"><h3>${icon('notes')}Notes</h3><button class="link small" data-act="newnote">${icon('plus')}New</button></div>
+          <button class="mini-row daily-row" data-act="daily">${icon('today')}<span>${dailyNote() ? '<b>Today’s note</b>' : 'Start <b>today’s note</b>'}</span><span class="muted small">${dailyNote() ? 'continue' : 'plan · reflect'}</span></button>
           <form class="capture" data-capture><input class="input" name="q" placeholder="Quick capture… (add #tags)" autocomplete="off" enterkeyhint="done"><button class="icon-btn accent" aria-label="Save">${icon('plus')}</button></form>
           ${openTodos.map(n => `<a class="mini-row" href="#/notes/${n.id}">${icon('checklist')}<span>${esc(noteTitle(n))} <span class="muted small">${n.todo.done}/${n.todo.total}</span></span></a>`).join('')}
           ${recent.map(n => `<a class="mini-row" href="#/notes/${n.id}">${icon('notes')}<span class="ellipsis">${esc(noteTitle(n))}</span><time class="muted small">${fmtShort(n.updated)}</time></a>`).join('') || '<p class="muted small">No notes yet.</p>'}
@@ -97,6 +99,7 @@ export function renderToday(main) {
     const a = e.target.closest('[data-act]');
     if (!a) return;
     if (a.dataset.act === 'newnote') { const n = newNote(); navigate(`#/notes/${n.id}`); }
+    if (a.dataset.act === 'daily') openDaily();
     if (a.dataset.act === 'search') document.dispatchEvent(new CustomEvent('open-search'));
   });
   page.addEventListener('submit', e => {

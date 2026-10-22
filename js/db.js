@@ -87,6 +87,8 @@ const DEFAULT_SETTINGS = {
   name: '',
   hiddenPersonFields: [],
   customPersonFields: [],
+  noteTemplates: [],
+  dailyTemplate: 'daily',
   lockHash: null,
   noteSort: 'updated',
   noteGroup: 'date',

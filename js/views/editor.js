@@ -5,6 +5,8 @@ import { icon } from '../icons.js';
 import { navigate, onLeave } from '../router.js';
 import { menu, toast, promptDialog, confirmDialog, sheet } from '../ui.js';
 import { attachMentions, personLine } from './mentions.js';
+import { templateSheet, saveAsTemplate, openDaily, noteFromTemplate } from './templates.js';
+import { addDays, fmtDay, today as todayKey } from '../util.js';
 
 // ---------- sanitizer (for paste + stored content) ----------
 const ALLOWED = new Set(['P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'DEL', 'H1', 'H2', 'H3', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'PRE', 'CODE', 'A', 'MARK', 'HR', 'DIV']);
@@ -274,6 +276,8 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
           <div class="tag-input-wrap"><span class="hash">#</span><input class="tag-input" placeholder="add tag" aria-label="Add tag" autocomplete="off" autocapitalize="off" enterkeyhint="done"><div class="tag-suggest"></div></div>
         </div>
         <div class="note-body" contenteditable="true" spellcheck="true" data-placeholder="Start writing… Add #tags and @people anywhere. Type  [ ]  for a checklist,  -  for bullets,  >  for a quote."></div>
+        ${!note.html && !note.title && note.draft && !note.trashed ? `<button class="chip ghost tpl-hint" data-act="template">${icon('sparkle')}Use a template</button>` : ''}
+        ${note.daily ? `<div class="daily-nav"><button class="link small" data-act="day-prev">${icon('back')}${fmtDay(addDays(note.daily, -1))}</button>${note.daily < todayKey() ? `<button class="link small" data-act="day-next">${fmtDay(addDays(note.daily, 1))}${icon('chevR')}</button>` : ''}</div>` : ''}
       </div>
     </div>
     <div class="toolbar" role="toolbar" aria-label="Formatting">${toolbarHTML()}</div>
@@ -367,6 +371,7 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
   // body
   body.addEventListener('input', e => {
     if (e.inputType === 'insertText' && e.data === ' ') tryShortcut(body);
+    view.querySelector('.tpl-hint')?.remove();
     persistSoon();
   });
   body.addEventListener('keydown', e => {
@@ -486,6 +491,13 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
     if (act === 'more') moreMenu(b);
   });
   view.addEventListener('click', e => {
+    const ta = e.target.closest('[data-act="template"], [data-act="day-prev"], [data-act="day-next"]');
+    if (ta) {
+      const act = ta.dataset.act;
+      if (act === 'template') templateSheet({ onPick: tplId => { remove('notes', id); const n = noteFromTemplate(tplId); navigate(`#/notes/${n.id}`, { replace: true }); } });
+      else { persistSoon.flush(true); openDaily(addDays(note.daily, act === 'day-prev' ? -1 : 1), { replace: true }); }
+      return;
+    }
     if (e.target.closest('[data-act="restore"]')) { save('notes', { ...get('notes', id), trashed: false }); toast('Note restored'); navigate(`#/notes/${id}`, { replace: true }); }
   });
 
@@ -497,6 +509,7 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
       { label: 'Copy as text', icon: 'copy', action: () => navigator.clipboard?.writeText((note.title ? note.title + '\n\n' : '') + note.text).then(() => toast('Copied')) },
       { label: 'Export as Markdown', icon: 'download', action: () => download(`${(note.title || 'note').replace(/[^\w-]+/g, '-')}.md`, toMarkdown(note), 'text/markdown') },
       { label: 'Note info', icon: 'info', action: () => infoSheet(note, body) },
+      { label: 'Save as template', icon: 'sparkle', action: () => saveAsTemplate(get('notes', id)) },
       '-',
       note.trashed
         ? { label: 'Delete forever', icon: 'trash', danger: true, action: async () => { if (await confirmDialog('This cannot be undone.')) { remove('notes', id); navigate('#/notes'); } } }
@@ -509,7 +522,12 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
   }
 
   // Focus: new notes start straight in the body (the first line names the note), existing ones stay put
-  if ((!note.title && !note.text || note.seeded && note.draft) && !note.trashed) setTimeout(() => { body.focus(); placeCaretIn(body); }, 50);
+  if ((!note.title && !note.text || note.seeded && note.draft) && !note.trashed) setTimeout(() => {
+    body.focus();
+    // templates: start in the first empty line under the first prompt
+    const gap = note.seeded && [...body.querySelectorAll('p, li')].find(el => !el.textContent.trim() && !el.querySelector('.mention'));
+    placeCaretIn(gap || body, !gap);
+  }, 50);
 
   // Discard empty drafts when leaving
   const offLeave = onLeave(next => {

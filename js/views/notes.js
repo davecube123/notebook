@@ -5,6 +5,7 @@ import { icon } from '../icons.js';
 import { navigate, rerender } from '../router.js';
 import { menu, sheet, toast, confirmDialog, promptDialog } from '../ui.js';
 import { renderEditor } from './editor.js';
+import { templateSheet } from './templates.js';
 
 // persisted-for-session UI state
 const ui = { q: '', tags: [], range: 'any', from: '', to: '', dateField: 'updated', box: 'notes' };
@@ -150,6 +151,7 @@ function listHTML(activeId) {
       <h1>${boxTitle}</h1>
       <div class="head-actions">
         <button class="icon-btn" data-act="viewmenu" aria-label="View options">${icon('sort')}</button>
+        ${ui.box === 'notes' ? `<button class="icon-btn" data-act="templates" aria-label="Daily note and templates" title="Daily note and templates (D for today)">${icon('today')}</button>` : ''}
         ${ui.box === 'notes' ? `<button class="icon-btn accent" data-act="new" aria-label="New note" title="New note (N)">${icon('edit')}</button>` : ''}
       </div>
     </div>
@@ -289,6 +291,7 @@ function bindList(root, activeId) {
     if (!b) return;
     const act = b.dataset.act;
     if (act === 'new') { const n = newNote(); navigate(`#/notes/${n.id}`); }
+    if (act === 'templates') templateSheet();
     if (act === 'clearq') { ui.q = ''; refreshList(); }
     if (act === 'reset') { Object.assign(ui, { q: '', tags: [], range: 'any', from: '', to: '' }); refreshList(); }
     if (act === 'range') rangeMenu(b, refreshList);

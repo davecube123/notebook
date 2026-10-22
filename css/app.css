@@ -940,3 +940,22 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .ty-facts { display: grid; gap: 2px; margin: 4px 0 0; }
 .ty-facts dt { font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 8px; }
 .ty-facts dd { margin: 0; font-size: 15px; line-height: 1.45; }
+
+/* Templates & daily note (templates.js) */
+.tpl-list { padding: 0; }
+.tpl-item { padding: 10px 14px; border-bottom: 1px solid var(--line); display: grid; gap: 6px; min-width: 0; }
+.tpl-item:last-child { border-bottom: 0; }
+.tpl-item.row-between { display: flex; align-items: center; gap: 8px; }
+.tpl-pick { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 12px; width: 100%; text-align: left; color: var(--ink); min-width: 0; }
+.tpl-pick > .ic:first-child { width: 20px; height: 20px; color: var(--accent); }
+.tpl-pick > .ic:last-child { width: 16px; height: 16px; color: var(--faint); }
+.tpl-pick > span { display: grid; gap: 2px; min-width: 0; }
+.tpl-pick b { font-size: 16px; font-weight: 600; }
+.tpl-item .ty-info { margin-left: 34px; }
+.tpl-daily { margin-top: 18px; }
+.tpl-hint { margin-top: 14px; }
+.daily-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 28px; padding-top: 14px; border-top: 1px solid var(--line); }
+.daily-nav .ic { width: 15px; height: 15px; }
+.daily-row { width: 100%; text-align: left; }
+.daily-row > span:nth-child(2) { flex: 1; }
+.note-body h3 + p, .note-body h3 + ul, .note-body h3 + ol { margin-top: 4px; }
