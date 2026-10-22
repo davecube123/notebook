@@ -105,7 +105,7 @@ export function personalityTab(p) {
     <details class="card pad why"><summary><b>Sources</b></summary>
       <p>Costa, P. &amp; McCrae, R. (1992). <i>NEO PI-R Professional Manual.</i> · Vazire, S. (2010). Who knows what about a person? <i>J. Personality &amp; Social Psychology.</i></p>
       <p>Keirsey, D. (1998). <i>Please Understand Me II.</i></p>
-      <p>Riso, D. &amp; Hudson, R. (1996). <i>Personality Types</i> (rev. ed.). · Riso, D. &amp; Hudson, R. (1999). <i>The Wisdom of the Enneagram</i> (includes the QUEST). · Naranjo, C. (1994). <i>Character and Neurosis.</i> · Palmer, H. (1988). <i>The Enneagram.</i></p>
+      <p>The Enneagram Institute, type descriptions (enneagraminstitute.com). · Riso, D. &amp; Hudson, R. (1996). <i>Personality Types</i> (rev. ed.). · Riso, D. &amp; Hudson, R. (1999). <i>The Wisdom of the Enneagram</i> (includes the QUEST). · Naranjo, C. (1994). <i>Character and Neurosis.</i> · Palmer, H. (1988). <i>The Enneagram.</i></p>
       <p>Jaiya. <i>Erotic Blueprints</i> (eroticblueprints.com). · Bancroft, J. &amp; Janssen, E. (2000). The dual control model of male sexual response. · Nagoski, E. (2015). <i>Come As You Are.</i></p>
       <p>Vaillant, G. (1992). <i>Ego Mechanisms of Defense.</i> · American Psychiatric Association (1994). <i>DSM-IV</i>, Defensive Functioning Scale.</p>
       <p>Carlson, S. (1985). A double-blind test of astrology. <i>Nature</i> 318.</p>
@@ -131,7 +131,7 @@ function enneaProfileHTML(n, wing) {
   const groups = ENNEA_TEST.map(q => q.opts.find(o => o[3].includes(n))[1]);
   return `<div class="ty-profile">
     <div class="ty-big">Type ${n} <span class="faint">${esc(ENNEA[n - 1][1])}${w ? ` · ${n}w${w}` : ''}</span></div>
-    <p class="muted small">${esc(t.brief)}</p>
+    <p class="muted small">${esc(t.kind)}: ${esc(t.brief.toLowerCase())}</p>
     <div class="chip-row wrap"><span class="ty-pill">${c[0]} · ${c[1]}</span><span class="ty-pill">${esc(groups[0])}</span><span class="ty-pill">${esc(groups[1])}</span></div>
     <div class="feel-label">Wing</div>
     <div class="chip-row wrap">${Object.entries(t.wings).map(([k, l]) => `<button class="chip ${+k === w ? 'on' : ''}" data-ty="ennea-wing" data-wing="${k}">${n}w${k} · ${esc(l)}</button>`).join('')}</div>
