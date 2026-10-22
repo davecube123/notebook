@@ -4,6 +4,7 @@ import { esc, htmlToText, debounce, normTag, fmtDateTime, download, haptic } fro
 import { icon } from '../icons.js';
 import { navigate, onLeave } from '../router.js';
 import { menu, toast, promptDialog, confirmDialog, sheet } from '../ui.js';
+import { attachMentions, personLine } from './mentions.js';
 
 // ---------- sanitizer (for paste + stored content) ----------
 const ALLOWED = new Set(['P', 'BR', 'B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'DEL', 'H1', 'H2', 'H3', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'PRE', 'CODE', 'A', 'MARK', 'HR', 'DIV']);
@@ -23,6 +24,8 @@ export function sanitize(html) {
       }
       const keep = {};
       if (ch.tagName === 'A') { const h = ch.getAttribute('href') || ''; if (/^(https?:|mailto:|tel:|#)/i.test(h)) keep.href = h; }
+      // person mentions: keep the person id so the link survives renames and same names
+      if (ch.tagName === 'A' && ch.classList.contains('mention') && /^[\w-]+$/.test(ch.dataset.person || '')) Object.assign(keep, { class: 'mention', 'data-person': ch.dataset.person, contenteditable: 'false', href: `#/people/${ch.dataset.person}` });
       if ((ch.tagName === 'UL' && ch.classList.contains('checklist')) ) keep.class = 'checklist';
       if (ch.tagName === 'LI' && ch.classList.contains('checked')) keep.class = 'checked';
       [...ch.attributes].forEach(a => ch.removeAttribute(a.name));
@@ -270,7 +273,7 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
           <div class="tag-list"></div>
           <div class="tag-input-wrap"><span class="hash">#</span><input class="tag-input" placeholder="add tag" aria-label="Add tag" autocomplete="off" autocapitalize="off" enterkeyhint="done"><div class="tag-suggest"></div></div>
         </div>
-        <div class="note-body" contenteditable="true" spellcheck="true" data-placeholder="Start writing… Add #tags anywhere. Type  [ ]  for a checklist,  -  for bullets,  >  for a quote."></div>
+        <div class="note-body" contenteditable="true" spellcheck="true" data-placeholder="Start writing… Add #tags and @people anywhere. Type  [ ]  for a checklist,  -  for bullets,  >  for a quote."></div>
       </div>
     </div>
     <div class="toolbar" role="toolbar" aria-label="Formatting">${toolbarHTML()}</div>
@@ -285,6 +288,8 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
   const tagInput = view.querySelector('.tag-input');
   const suggest = view.querySelector('.tag-suggest');
   body.innerHTML = sanitize(note.html || '');
+  // mentions show the person's current name
+  body.querySelectorAll('a.mention').forEach(a => { const p = get('people', a.dataset.person); if (p) a.textContent = '@' + p.name; });
   // the browser re-serializes stored HTML slightly differently (' vs &#x27;), so compare edits against what it shows
   let savedHtml = body.innerHTML;
   if (note.trashed) { body.contentEditable = 'false'; titleEl.readOnly = true; }
@@ -311,7 +316,8 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
     const newTags = inlineTags(text, final).filter(t => !(note.tags || []).includes(t));
     if ((html === savedHtml || html === note.html) && title === note.title && !newTags.length) return;
     savedHtml = html;
-    note = { ...note, html, title, text, tags: [...new Set([...(note.tags || []), ...newTags])], updated: Date.now(), todo: countTodos(body), draft: false };
+    const people = [...new Set([...body.querySelectorAll('a.mention[data-person]')].map(a => a.dataset.person))];
+    note = { ...note, html, title, text, people, tags: [...new Set([...(note.tags || []), ...newTags])], updated: Date.now(), todo: countTodos(body), draft: false };
     save('notes', note, { silent: true });
     if (newTags.length) drawTags();
     setStatus();
@@ -404,6 +410,14 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
         return;
       }
     }
+    const pm = e.target.closest('a.mention');
+    if (pm) {
+      e.preventDefault();
+      const p = get('people', pm.dataset.person);
+      if (p) toast(`${p.name} · ${personLine(p)}`, { action: 'Open', onAction: () => navigate(`#/people/${p.id}`) });
+      else toast('This person was deleted');
+      return;
+    }
     const a = e.target.closest('a[href]');
     if (a) {
       if (e.metaKey || e.ctrlKey) window.open(a.href, '_blank', 'noopener');
@@ -438,6 +452,9 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
     persistSoon();
     updateToolbarState(body, tb);
   });
+  // @ to mention a person
+  const detachMentions = note.trashed ? () => {} : attachMentions(body, { onInsert: () => persistSoon() });
+
   const onSel = () => { if (body.contains(getSelection().anchorNode)) updateToolbarState(body, tb); };
   document.addEventListener('selectionchange', onSel);
 
@@ -492,7 +509,7 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
   }
 
   // Focus: new notes start straight in the body (the first line names the note), existing ones stay put
-  if (!note.title && !note.text && !note.trashed) setTimeout(() => { body.focus(); placeCaretIn(body); }, 50);
+  if ((!note.title && !note.text || note.seeded && note.draft) && !note.trashed) setTimeout(() => { body.focus(); placeCaretIn(body); }, 50);
 
   // Discard empty drafts when leaving
   const offLeave = onLeave(next => {
@@ -501,6 +518,7 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
     const n = get('notes', id);
     // still a draft = never touched, so tags it inherited from the search don't keep it alive
     if (n && !n.title && !n.text && !n.html.includes('<hr') && (n.draft || !(n.tags || []).length)) remove('notes', id);
+    else if (n?.draft && n.seeded) remove('notes', id); // a "new note about…" that was never written in
   });
   const beforeUnload = () => persistSoon.flush(true);
   window.addEventListener('pagehide', beforeUnload);
@@ -509,6 +527,7 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
     persistSoon.flush(true);
     offLeave();
     document.removeEventListener('selectionchange', onSel);
+    detachMentions();
     vv?.removeEventListener('resize', onVV); vv?.removeEventListener('scroll', onVV);
     window.removeEventListener('pagehide', beforeUnload);
   };
@@ -541,7 +560,7 @@ export function toMarkdown(note) {
     if (t === 'S' || t === 'STRIKE' || t === 'DEL') return `~~${x}~~`;
     if (t === 'CODE') return '`' + x + '`';
     if (t === 'MARK') return `==${x}==`;
-    if (t === 'A') return `[${x}](${c.getAttribute('href')})`;
+    if (t === 'A') return c.classList.contains('mention') ? x : `[${x}](${c.getAttribute('href')})`;
     if (t === 'BR') return '\n';
     return x;
   }).join('');

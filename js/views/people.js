@@ -1,10 +1,12 @@
 // People: profiles with a spy's dossier and a psychiatrist's notes, plus an encounter log.
 import { list, get, save, remove, uid, settings, setSettings } from '../db.js';
-import { esc, today, fmtDay, relDays, daysBetween, initials, colorFor, resizeImage, debounce, normTag, parseDay, haptic } from '../util.js';
+import { esc, today, ymd, fmtDay, relDays, daysBetween, initials, colorFor, resizeImage, debounce, normTag, parseDay, haptic } from '../util.js';
 import { icon } from '../icons.js';
 import { navigate, rerender } from '../router.js';
 import { sheet, toast, confirmDialog, menu } from '../ui.js';
 import { SECTIONS, BIG_FIVE, TABS, CIRCLES } from './fields.js';
+import { notesAbout, possibleNotes, namesakes, personLine, contextFor, linkNote, unlinkNote, notThem, mentionHTML, nameTerms } from './mentions.js';
+import { newNote, noteTitle } from './notes.js';
 
 const ui = { q: '', circle: '', sort: 'recent' };
 const KEEP_DAYS = { 'Week': 7, '2 weeks': 14, 'Month': 30, '3 months': 90, '6 months': 180, 'Year': 365 };
@@ -78,7 +80,7 @@ function listHTML() {
   ${ps.length ? groups.map(([k, arr]) => `<section class="note-group">${k ? `<h3 class="group-label">${esc(k)}</h3>` : ''}<div class="card list-card">${arr.map(p => {
     const ls = lastSeen(p);
     return `<a class="person-row" href="#/people/${p.id}">${avatar(p)}
-      <div class="grow"><div class="person-name">${esc(p.name)}${p.favorite ? `<span class="fav">${icon('star')}</span>` : ''}</div><div class="muted small ellipsis">${esc(subtitle(p))}</div></div>
+      <div class="grow"><div class="person-name">${esc(p.name)}${p.favorite ? `<span class="fav">${icon('star')}</span>` : ''}</div><div class="muted small ellipsis">${esc(subtitle(p) || personLine(p))}</div></div>
       <div class="person-meta muted small">${p.circle ? `<span class="circle-pill">${esc(p.circle)}</span>` : ''}${ls ? `<span>${relDays(ls)}</span>` : ''}</div></a>`;
   }).join('')}</div></section>`).join('')
   : all.length ? `<div class="empty">${icon('search', 'empty-ic')}<h3>No one matches</h3></div>`
@@ -116,6 +118,7 @@ export function newPersonSheet(prefill = {}) {
     render(body, close) {
       body.innerHTML = `<form class="stack">
         <label class="field"><span>Name</span><input class="input" name="name" required placeholder="Full name" autofocus autocomplete="off" value="${esc(prefill.name || '')}"></label>
+        <p class="dup-warn small" hidden></p>
         <label class="field"><span>Who are they, in a line? <em class="faint">optional</em></span><input class="input" name="summary" placeholder="e.g. Designer I met at Maya's party"></label>
         <div class="grid2">
           <label class="field"><span>Circle</span><select class="input" name="circle"><option value="">—</option>${CIRCLES.map(c => `<option>${esc(c)}</option>`).join('')}</select></label>
@@ -126,6 +129,12 @@ export function newPersonSheet(prefill = {}) {
       </form>`;
       const f = body.querySelector('form');
       body.querySelector('[data-cancel]').onclick = () => close();
+      const warn = body.querySelector('.dup-warn');
+      f.name.addEventListener('input', () => {
+        const sakes = f.name.value.trim().length >= 2 ? namesakes({ id: null, name: f.name.value, fields: {} }) : [];
+        warn.hidden = !sakes.length;
+        warn.innerHTML = sakes.length ? `You already have ${sakes.map(q => `<b>${esc(q.name)}</b> (${esc(personLine(q))})`).join(', ')}. Fill in “who are they” so you can tell them apart. Notes about each stay separate.` : '';
+      });
       f.onsubmit = e => {
         e.preventDefault();
         const name = f.name.value.trim(); if (!name) return;
@@ -168,8 +177,37 @@ function scale(name, label, val, lo = 'Low', hi = 'High') {
   return `<div class="scale-row"><span class="scale-label">${label}</span><div class="scale" data-scale="${name}">${[1, 2, 3, 4, 5].map(n => `<button class="${val >= n ? 'on' : ''}" data-v="${n}" aria-label="${label} ${n}"></button>`).join('')}</div></div>`;
 }
 
+function notesTab(p) {
+  const first = p.name.split(/\s+/)[0];
+  const linked = notesAbout(p);
+  const maybe = possibleNotes(p);
+  const sakes = namesakes(p);
+  const clear = maybe.filter(m => !m.also.length);
+  const row = (n, actions = '', extra = '') => {
+    const title = noteTitle(n), ctx = contextFor(n, p);
+    const repeat = ctx.replace(/^…/, '').startsWith(title.slice(0, 30)); // one-line notes: the title already says it
+    return `<div class="list-row pnote">
+    <a class="pnote-main" href="#/notes/${n.id}"><b>${esc(title)}</b><span class="muted small">${fmtDay(ymd(new Date(n.created)), { month: 'short', day: 'numeric', year: 'numeric' })}${repeat ? '' : ` · ${esc(ctx)}`}</span>${extra}</a>
+    ${actions}</div>`;
+  };
+  return `
+    <button class="btn ghost block" data-new-note-about>${icon('edit')}New note about ${esc(first)}</button>
+    ${sakes.length ? `<div class="banner">${icon('info')}<span>Also in People: ${sakes.map(q => `<a class="link-inline" href="#/people/${q.id}?tab=notes">${esc(q.name)}</a> <span class="muted">(${esc(personLine(q))})</span>`).join(', ')}. Notes are linked to one person only when you choose.</span></div>` : ''}
+    <section class="prop-section"><h3 class="group-label">${icon('notes')}Notes about ${esc(first)}<span class="count">${linked.length}</span></h3>
+      ${linked.length ? `<div class="card list-card">${linked.map(n => row(n, (n.linkedPeople || []).includes(p.id) && !(n.people || []).includes(p.id) ? `<button class="icon-btn sm" data-unlink-note="${n.id}" aria-label="Unlink from ${esc(first)}">${icon('x')}</button>` : '')).join('')}</div>`
+        : `<p class="muted small pad-x">Type <b>@${esc(first)}</b> in any note to link it here, or tap the button above.</p>`}
+    </section>
+    ${maybe.length ? `<section class="prop-section"><div class="row-between"><h3 class="group-label">Possibly about ${esc(first)}<span class="count">${maybe.length}</span></h3>${clear.length > 1 ? `<button class="link small" data-link-all>Link ${clear.length}</button>` : ''}</div>
+      <p class="muted small pad-x">These notes contain “${esc(nameTerms(p).join('”, “'))}” but aren't linked yet.</p>
+      <div class="card list-card">${maybe.map(({ note, also }) => row(note,
+        `<span class="pnote-actions"><button class="btn primary sm" data-link-note="${note.id}">Link</button><button class="btn ghost sm" data-not-them="${note.id}">Not ${esc(first)}</button></span>`,
+        also.length ? `<span class="same-name-hint">${icon('info')}Could also be ${also.map(q => `${esc(q.name)} (${esc(personLine(q))})`).join(' or ')}</span>` : '')).join('')}</div>
+    </section>` : ''}`;
+}
+
 function tabHTML(p, tab) {
   const st = settings();
+  if (tab === 'notes') return notesTab(p);
   const hidden = st.hiddenPersonFields;
   if (tab === 'log') {
     const ints = [...(p.interactions || [])].sort((a, b) => b.date.localeCompare(a.date));
@@ -235,8 +273,8 @@ function renderPerson(main, id, query) {
         </div>
         ${rc ? `<div class="banner warn">${icon('bell')}It's been ${rc.gap === Infinity ? 'a while' : rc.gap + ' days'} — you wanted to stay in touch every ${p.fields.keepInTouch.toLowerCase()}.</div>` : ''}
       </div>
-      <nav class="seg" role="tablist">${TABS.map(([k, l, ic]) => `<a role="tab" class="${k === tab ? 'on' : ''}" href="#/people/${id}?tab=${k}" aria-selected="${k === tab}">${icon(ic)}<span>${l}</span></a>`).join('')}</nav>
-      ${tab !== 'log' ? `<div class="tab-tools"><button class="link small" data-act="hideempty">${settings().personHideEmpty ? 'Show empty fields' : 'Hide empty fields'}</button></div>` : ''}
+      <nav class="seg" role="tablist">${TABS.map(([k, l, ic]) => `<a role="tab" class="${k === tab ? 'on' : ''}" href="#/people/${id}?tab=${k}" aria-selected="${k === tab}">${icon(ic)}<span>${l}${k === 'notes' && notesAbout(p).length ? ` <em class="tab-count">${notesAbout(p).length}</em>` : ''}</span></a>`).join('')}</nav>
+      ${tab !== 'log' && tab !== 'notes' ? `<div class="tab-tools"><button class="link small" data-act="hideempty">${settings().personHideEmpty ? 'Show empty fields' : 'Hide empty fields'}</button></div>` : ''}
       <div class="tab-body">${tabHTML(p, tab)}</div>
     </div>`;
     main.querySelectorAll('textarea.autosize').forEach(a => { a.style.height = 'auto'; a.style.height = a.scrollHeight + 'px'; });
@@ -280,6 +318,29 @@ function renderPerson(main, id, query) {
     mood = ''; haptic(); toast('Encounter logged');
   };
   main.onclick = async e => {
+    const redraw = () => { const st = main.scrollTop; draw(); main.scrollTop = st; };
+    const ln = e.target.closest('[data-link-note]');
+    if (ln) { const nid = ln.dataset.linkNote; linkNote(nid, id); haptic(8); redraw(); toast('Linked', { action: 'Undo', onAction: () => { unlinkNote(nid, id); redraw(); } }); return; }
+    const ul = e.target.closest('[data-unlink-note]');
+    if (ul) { const nid = ul.dataset.unlinkNote; unlinkNote(nid, id); redraw(); toast('Unlinked', { action: 'Undo', onAction: () => { linkNote(nid, id); redraw(); } }); return; }
+    const nt = e.target.closest('[data-not-them]');
+    if (nt) {
+      const nid = nt.dataset.notThem; notThem(nid, id); redraw();
+      toast('Hidden from this person', { action: 'Undo', onAction: () => { const q = get('people', id); save('people', { ...q, notNotes: (q.notNotes || []).filter(x => x !== nid) }); redraw(); } });
+      return;
+    }
+    if (e.target.closest('[data-link-all]')) {
+      const ids = possibleNotes(get('people', id)).filter(m => !m.also.length).map(m => m.note.id);
+      ids.forEach(nid => linkNote(nid, id)); haptic(10); redraw();
+      toast(`Linked ${ids.length} notes`, { action: 'Undo', onAction: () => { ids.forEach(nid => unlinkNote(nid, id)); redraw(); } });
+      return;
+    }
+    if (e.target.closest('[data-new-note-about]')) {
+      const p = get('people', id);
+      const n = newNote({ html: `<p>${mentionHTML(p)}&nbsp;</p>`, text: `@${p.name}`, people: [p.id], tags: [], seeded: true });
+      navigate(`#/notes/${n.id}`);
+      return;
+    }
     const pr = e.target.closest('.prop:not(.editing)');
     if (pr && !e.target.closest('a')) return editProp(pr);
     const sc = e.target.closest('[data-scale] button');

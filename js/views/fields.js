@@ -151,6 +151,7 @@ export const TABS = [
   ['dossier', 'Dossier', 'spy'],
   ['psyche', 'Psyche', 'brain'],
   ['log', 'Log', 'history'],
+  ['notes', 'Notes', 'notes'],
 ];
 
 export const allFieldDefs = (custom = []) => {
