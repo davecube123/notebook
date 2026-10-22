@@ -18,6 +18,7 @@
     { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
   ],
   "shortcuts": [
+    { "name": "Check in", "url": "./#/feel?checkin=1", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "New note", "url": "./#/notes?new=1", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "One Thing", "url": "./#/onething", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "Habits", "url": "./#/habits", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }

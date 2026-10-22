@@ -8,6 +8,7 @@ import { heatmap } from './heatmap.js';
 import { getOne, oneThingCard, bindOneThing } from './onething.js';
 import { isPerfect, habitsOn, logFor } from './habits.js';
 import { noteTitle } from './notes.js';
+import { feelingsLine } from './feelings.js';
 
 const ui = { y: null, m: null, sel: null, layers: { trackers: true, one: true, habits: true, notes: false } };
 // trackers picked to show on the month grid (remembered); none picked = show them all
@@ -173,11 +174,13 @@ function dayPanel(day) {
   const dn = new Set(logFor(day).done);
   const showOne = day <= addDays(today(), 7) && (getOne(day) || day >= today());
   const showHabits = hs.length && day <= today();
+  const feel = feelingsLine(day);
   const also = [
     ...bdays.map(p => `<a class="day-line" href="#/people/${p.id}">${icon('cake')}<span><b>${esc(p.name)}</b>'s birthday</span>${icon('chevR', 'day-chev')}</a>`),
     ...met.map(({ p, i }) => `<a class="day-line" href="#/people/${p.id}">${icon('chat')}<span>Saw <b>${esc(p.name)}</b>${i.note ? ' — ' + esc(i.note.slice(0, 60)) : ''}</span>${icon('chevR', 'day-chev')}</a>`),
     ...notes.map(n => `<a class="day-line" href="#/notes/${n.id}">${icon('notes')}<span>${esc(noteTitle(n))}</span>${icon('chevR', 'day-chev')}</a>`),
   ];
+  if (feel) also.unshift(feel);
   return `<div class="day-panel">
     <div class="day-head"><h2>${fmtLongDay(day)}</h2><span class="muted small">${relDays(day)}</span></div>
     <section class="day-section"><h3 class="day-label">Track</h3>${trackTiles(day)}</section>

@@ -11,6 +11,7 @@ import { renderCalendar } from './views/calendar.js';
 import { renderPeople, avatar } from './views/people.js';
 import { renderHabits } from './views/habits.js';
 import { renderSettings } from './views/settings.js';
+import { renderFeelings, moods } from './views/feelings.js';
 import { APP_VERSION } from './version.js';
 import './install.js';
 
@@ -19,6 +20,7 @@ const NAV = [
   ['today', 'Today', 'today', '#/today'],
   ['notes', 'Notes', 'notes', '#/notes'],
   ['onething', 'One Thing', 'target', '#/onething'],
+  ['feel', 'Feelings', 'heart', '#/feel'],
   ['habits', 'Habits', 'habits', '#/habits'],
   ['calendar', 'Calendar', 'calendar', '#/calendar'],
   ['people', 'People', 'people', '#/people'],
@@ -88,6 +90,8 @@ function openSearch() {
             .forEach(o => res.push({ k: 'One thing', href: `#/onething`, html: `${icon('target')}<div class="grow">${highlight(o.text, q)}<div class="muted small">${fmtDay(o.id)}${o.done ? ' · done' : ''}</div></div>` }));
           const tmap = new Map(list('trackers').map(t => [t.id, t]));
           list('trackers').filter(t => t.name.toLowerCase().includes(q)).forEach(t => res.push({ k: 'Tracker', href: '#/calendar', html: `<span class="ev-badge" style="--c:${t.color}">${esc(t.emoji)}</span><div class="grow">${highlight(t.name, q)}</div>` }));
+          moods().filter(m => (m.words.join(' ') + ' ' + (m.note || '')).toLowerCase().includes(q)).reverse().slice(0, 4)
+            .forEach(m => res.push({ k: 'Feeling', href: '#/feel', html: `${icon('heart')}<div class="grow">${highlight(m.words.join(', '), q)}<div class="muted small">${fmtDay(m.date)}${m.note ? ' · ' + highlight(snippet(m.note, q, 60), q) : ''}</div></div>` }));
           list('events').filter(e => e.note && e.note.toLowerCase().includes(q)).slice(0, 4)
             .forEach(e => res.push({ k: 'Log', href: `#/calendar?day=${e.date}`, html: `${icon('calendar')}<div class="grow">${highlight(e.note, q)}<div class="muted small">${esc(tmap.get(e.trackerId)?.name || '')} · ${fmtDay(e.date)}</div></div>` }));
           const NAVQ = [['today', 'Today'], ['notes', 'Notes'], ['onething', 'One Thing'], ['habits', 'Habits'], ['calendar', 'Calendar'], ['people', 'People'], ['settings', 'Settings']];
@@ -121,7 +125,7 @@ function onKey(e) {
   if (e.key === '/') { e.preventDefault(); openSearch(); return; }
   if (gPending) {
     gPending = false;
-    const map = { t: 'today', n: 'notes', o: 'onething', c: 'calendar', p: 'people', h: 'habits', s: 'settings' };
+    const map = { t: 'today', n: 'notes', o: 'onething', c: 'calendar', p: 'people', h: 'habits', f: 'feel', s: 'settings' };
     if (map[e.key]) navigate('#/' + map[e.key]);
     return;
   }
@@ -174,6 +178,7 @@ async function boot() {
   route('/people', renderPeople, { name: 'people' });
   route('/people/:id', renderPeople, { name: 'person' });
   route('/settings', renderSettings, { name: 'settings' });
+  route('/feel', renderFeelings, { name: 'feel' });
 
   document.addEventListener('routechange', () => {
     updateNav();

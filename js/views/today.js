@@ -9,6 +9,7 @@ import { trackers, trackerStats, trackTiles, bindTrackTiles } from './calendar.j
 import { newNote, noteTitle } from './notes.js';
 import { nextBirthday, reconnectDue, avatar } from './people.js';
 import { installCard, bindInstall } from '../install.js';
+import { feelingsCard, bindFeelings } from './feelings.js';
 
 const QUOTES = [
   ['What you do every day matters more than what you do once in a while.', 'Gretchen Rubin'],
@@ -52,6 +53,7 @@ export function renderToday(main) {
     <div class="today-grid">
       <div class="col">
         ${oneThingCard(t, { big: true, link: true })}
+        ${feelingsCard()}
         ${habitsCard(t)}
       </div>
       <div class="col">
@@ -90,6 +92,7 @@ export function renderToday(main) {
   bindHabits(page);
   bindInstall(page, rerender);
   bindTrackTiles(page);
+  bindFeelings(page);
   page.addEventListener('click', e => {
     const a = e.target.closest('[data-act]');
     if (!a) return;

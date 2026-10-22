@@ -51,7 +51,7 @@ export function renderSettings(main) {
     <section class="section"><h3 class="group-label">Shortcuts</h3>
       <div class="card pad shortcuts">
         <div><kbd>/</kbd> or <kbd>⌘K</kbd> Search everything</div><div><kbd>N</kbd> New note</div>
-        <div><kbd>G</kbd> then <kbd>T</kbd>/<kbd>N</kbd>/<kbd>O</kbd>/<kbd>C</kbd>/<kbd>P</kbd>/<kbd>H</kbd> Go to Today, Notes, One Thing, Calendar, People, Habits</div>
+        <div><kbd>G</kbd> then <kbd>T</kbd>/<kbd>N</kbd>/<kbd>O</kbd>/<kbd>C</kbd>/<kbd>P</kbd>/<kbd>H</kbd>/<kbd>F</kbd> Go to Today, Notes, One Thing, Calendar, People, Habits, Feelings</div>
         <div>In notes: <kbd>[ ]</kbd> checklist · <kbd>-</kbd> bullet · <kbd>1.</kbd> numbered · <kbd>&gt;</kbd> quote · <kbd>#</kbd> heading · <kbd>\`\`\`</kbd> code · <kbd>---</kbd> divider, each followed by a space</div>
         <div><kbd>⌘B</kbd> <kbd>⌘I</kbd> <kbd>⌘U</kbd> <kbd>⌘K</kbd> link · <kbd>⌘⇧C</kbd> checklist · <kbd>Tab</kbd> indent list</div>
       </div></section>
