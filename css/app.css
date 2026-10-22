@@ -674,9 +674,6 @@ body.in-editor #toast { bottom: 80px; }
 .scale { display: flex; gap: 5px; }
 .scale button { width: 28px; height: 8px; border-radius: 4px; background: var(--fill); transition: background .15s; }
 .scale button.on { background: var(--accent); }
-.big5 { display: grid; gap: 16px; }
-.b5-head { display: flex; justify-content: space-between; font-size: 14.5px; }
-.b5-ends { display: flex; justify-content: space-between; }
 input[type="range"] { width: 100%; accent-color: var(--accent); margin: 6px 0 2px; }
 input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .log-form { display: grid; gap: 10px; margin-bottom: 18px; }
@@ -856,3 +853,55 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .banner > span { flex: 1; min-width: 0; }
 .banner { flex-wrap: nowrap; align-items: flex-start; }
 .banner .ic { flex: none; margin-top: 2px; }
+
+/* Personality tab (typology.js) */
+.ty-card { display: grid; gap: 14px; }
+.ty-trait { display: grid; gap: 7px; padding-bottom: 14px; border-bottom: 1px solid var(--line); min-width: 0; }
+.ty-trait:last-of-type { border-bottom: 0; padding-bottom: 0; }
+.ty-trait-head { display: flex; align-items: baseline; gap: 8px; }
+.ty-scale { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.ty-scale button { height: 34px; border-radius: 9px; background: var(--fill-2); color: var(--muted); font-size: 15px; font-weight: 500; transition: background .15s, color .15s; }
+.ty-scale button.on { background: var(--accent); color: #fff; }
+.ty-desc { color: var(--ink-2); line-height: 1.4; }
+.ty-info summary { list-style: none; display: inline-flex; align-items: center; gap: 5px; font-size: 13.5px; color: var(--accent); cursor: pointer; }
+.ty-info summary::-webkit-details-marker { display: none; }
+.ty-info summary .ic { width: 15px; height: 15px; }
+.ty-info > div { margin-top: 8px; padding: 10px 12px; border-radius: 10px; background: var(--fill-2); font-size: 14.5px; line-height: 1.45; color: var(--ink-2); display: grid; gap: 8px; }
+.ty-result { display: grid; gap: 8px; }
+.ty-result p { margin: 0; line-height: 1.45; }
+.ty-result.center { text-align: center; justify-items: center; padding: 8px 0 16px; }
+.ty-big { font-size: 24px; font-weight: 700; letter-spacing: -.01em; }
+.ty-big .faint { font-weight: 500; font-size: 17px; }
+.ty-pill { display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-ink); font-size: 13px; font-weight: 500; }
+.ty-verdict { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--accent-soft); font-size: 14.5px; line-height: 1.45; }
+.ty-pick { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: center; column-gap: 8px; width: 100%; text-align: left; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.ty-pick .ic { grid-row: 1 / 3; grid-column: 2; width: 16px; height: 16px; color: var(--faint); }
+.ty-pick-label { font-size: 13px; color: var(--muted); }
+.ty-pick-val { font-size: 15.5px; line-height: 1.35; min-width: 0; }
+.ty-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.ty-row > span { display: grid; gap: 2px; min-width: 0; }
+.ty-row .ty-scale { width: 190px; flex: none; }
+@media (max-width: 400px) { .ty-row { flex-direction: column; align-items: stretch; } .ty-row .ty-scale { width: auto; } }
+.ty-def-level { display: grid; gap: 6px; }
+.ty-tone { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; text-transform: none; color: var(--ink-2); }
+.ty-tone::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.ty-tone.good::before { background: var(--q-green); }
+.ty-tone.mild::before { background: var(--q-blue); }
+.ty-tone.mid::before { background: var(--q-yellow); }
+.ty-tone.low::before { background: var(--q-red); }
+.ty-steps { display: flex; gap: 6px; margin-bottom: 14px; }
+.ty-steps i { flex: 1; height: 4px; border-radius: 2px; background: var(--fill); }
+.ty-steps i.on { background: var(--accent); }
+.ty-q { font-size: 20px; margin: 0 0 4px; }
+.ty-option { display: grid; gap: 3px; width: 100%; text-align: left; padding: 12px 14px; margin-top: 10px; border-radius: 12px; background: var(--fill-2); border: 1.5px solid transparent; font-size: 15px; line-height: 1.4; color: var(--ink); }
+.ty-option span { color: var(--ink-2); font-size: 14px; }
+.ty-option .faint { color: var(--muted); }
+.ty-option.sel { border-color: var(--accent); background: var(--accent-soft); }
+.ty-option.compact { margin-top: 0; padding: 10px 12px; }
+.ty-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ty-check { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.ty-check input { accent-color: var(--accent); width: 18px; height: 18px; margin-top: 2px; }
+.ty-check > span { display: grid; gap: 2px; font-size: 14px; line-height: 1.4; color: var(--ink-2); }
+.ty-check b { color: var(--ink); font-size: 15px; }
+.ty-intro { margin: 4px 0 18px; }
+.ty-check .faint { color: var(--muted); }

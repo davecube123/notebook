@@ -80,7 +80,7 @@ export const mentionHTML = p => `<a class="mention" data-person="${esc(p.id)}" h
 
 export function quickPerson(name) {
   const clean = name.trim().replace(/^./, c => c.toUpperCase());
-  const p = { id: uid(), name: clean, summary: '', circle: '', tags: [], favorite: false, photo: null, trust: 0, closeness: 0, big5: {}, fields: {}, interactions: [], created: Date.now(), updated: Date.now() };
+  const p = { id: uid(), name: clean, summary: '', circle: '', tags: [], favorite: false, photo: null, trust: 0, closeness: 0, fields: {}, interactions: [], created: Date.now(), updated: Date.now() };
   save('people', p, { silent: true });
   return p;
 }

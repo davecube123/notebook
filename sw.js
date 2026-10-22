@@ -1,11 +1,11 @@
 // Offline-first service worker. Bump VERSION (and APP_VERSION in js/version.js) when shipping changes.
-const VERSION = 'almanac-v3.2';
+const VERSION = 'almanac-v3.3';
 const ASSETS = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'js/app.js', 'js/version.js', 'js/install.js', 'js/db.js', 'js/util.js', 'js/ui.js', 'js/icons.js', 'js/router.js',
   'js/views/today.js', 'js/views/notes.js', 'js/views/editor.js', 'js/views/onething.js',
   'js/views/habits.js', 'js/views/calendar.js', 'js/views/people.js', 'js/views/fields.js',
-  'js/views/settings.js', 'js/views/heatmap.js', 'js/views/feelings.js', 'js/views/emotions.js', 'js/views/mentions.js',
+  'js/views/settings.js', 'js/views/heatmap.js', 'js/views/feelings.js', 'js/views/emotions.js', 'js/views/mentions.js', 'js/views/typology.js',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png',
 ];
 

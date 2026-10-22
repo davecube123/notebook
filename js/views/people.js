@@ -1,10 +1,11 @@
-// People: profiles with a spy's dossier and a psychiatrist's notes, plus an encounter log.
+// People: a short profile, a researched personality reading, an encounter log and linked notes.
 import { list, get, save, remove, uid, settings, setSettings } from '../db.js';
 import { esc, today, ymd, fmtDay, relDays, daysBetween, initials, colorFor, resizeImage, debounce, normTag, parseDay, haptic } from '../util.js';
 import { icon } from '../icons.js';
 import { navigate, rerender } from '../router.js';
 import { sheet, toast, confirmDialog, menu } from '../ui.js';
-import { SECTIONS, BIG_FIVE, TABS, CIRCLES } from './fields.js';
+import { SECTIONS, LEGACY_FIELDS, findField, TABS, CIRCLES } from './fields.js';
+import { personalityTab, handlePersonality, handlePersonalityInput, personalityText } from './typology.js';
 import { notesAbout, possibleNotes, namesakes, personLine, contextFor, linkNote, unlinkNote, notThem, mentionHTML, nameTerms } from './mentions.js';
 import { newNote, noteTitle } from './notes.js';
 
@@ -140,7 +141,7 @@ export function newPersonSheet(prefill = {}) {
         const name = f.name.value.trim(); if (!name) return;
         const p = {
           id: uid(), name, summary: f.summary.value.trim(), circle: f.circle.value, tags: [], favorite: false, photo: null,
-          trust: 0, closeness: 0, big5: {}, fields: { metDate: f.met.value, metWhere: f.where.value.trim() },
+          trust: 0, closeness: 0, fields: { metDate: f.met.value, metWhere: f.where.value.trim() },
           interactions: f.met.value ? [{ id: uid(), date: f.met.value, where: f.where.value.trim(), note: 'First met', mood: '' }] : [],
           created: Date.now(), updated: Date.now(),
         };
@@ -222,30 +223,24 @@ function tabHTML(p, tab) {
         ${i.note ? `<div class="tl-note">${esc(i.note).replace(/\n/g, '<br>')}</div>` : ''}</div></div>`).join('')}</div>`
       : '<p class="muted">No encounters logged yet.</p>'}`;
   }
-  let html = SECTIONS.filter(s => s.tab === tab).map(s => sectionHTML(p, s, hidden)).join('');
-  if (tab === 'profile' && st.customPersonFields.length) {
+  if (tab === 'personality') return personalityTab(p);
+  let html = SECTIONS.map(s => sectionHTML(p, s, hidden)).join('');
+  if (st.customPersonFields.length) {
     html += sectionHTML(p, { id: 'custom', title: 'Custom', icon: 'edit', fields: st.customPersonFields.map(c => [c.key, c.label, c.type]) }, hidden);
   }
-  if (tab === 'psyche' && !hidden.includes('big5')) {
-    html = `<section class="prop-section"><h3 class="group-label">${icon('brain')}Big Five (your read)</h3><div class="card pad big5">
-      ${BIG_FIVE.map(([k, name, lo, hi]) => { const v = p.big5?.[k]; return `<div class="b5-row"><div class="b5-head"><b>${name}</b><span class="muted small">${v == null ? 'not rated' : v}</span></div>
-        <input type="range" min="0" max="100" step="5" value="${v ?? 50}" data-b5="${k}" class="${v == null ? 'unset' : ''}" aria-label="${name}">
-        <div class="b5-ends muted small"><span>${lo}</span><span>${hi}</span></div></div>`; }).join('')}
-    </div></section>` + html;
-  }
-  if (tab === 'profile') {
-    html = `<section class="prop-section"><div class="card pad ratings">
+  const legacy = LEGACY_FIELDS.filter(f => p.fields?.[f[0]] && f[0] !== 'mbti' && f[0] !== 'enneagram'); // those two carry over into Personality
+  if (legacy.length) html += `<section class="prop-section"><h3 class="group-label">${icon('history')}Earlier details<span class="count">${legacy.length}</span></h3><div class="card props">${legacy.map(f => propRow(p, f)).join('')}</div><p class="muted small pad-x">From the older, longer profile. Clear a field to remove it from here.</p></section>`;
+  html = `<section class="prop-section"><div class="card pad ratings">
       ${scale('trust', 'Trust', p.trust)}${scale('closeness', 'Closeness', p.closeness)}${scale('energy', 'Energy they give', p.energy)}
     </div></section>
     <section class="prop-section"><h3 class="group-label">${icon('notes')}Notes</h3><div class="card"><textarea class="input bare autosize" data-freenotes rows="3" placeholder="Anything else worth remembering…">${esc(p.notes || '')}</textarea></div></section>` + html;
-  }
   return html || '<p class="muted">All fields in this tab are hidden. Use “Customize fields” to show some.</p>';
 }
 
 function renderPerson(main, id, query) {
   const p0 = get('people', id);
   if (!p0) { navigate('#/people', { replace: true }); return; }
-  const tab = query.tab || 'profile';
+  const tab = TABS.some(t => t[0] === query.tab) ? query.tab : 'profile';
   const draw = () => {
     const p = get('people', id);
     const ls = lastSeen(p), nb = nextBirthday(p), rc = reconnectDue(p);
@@ -274,7 +269,7 @@ function renderPerson(main, id, query) {
         ${rc ? `<div class="banner warn">${icon('bell')}It's been ${rc.gap === Infinity ? 'a while' : rc.gap + ' days'} — you wanted to stay in touch every ${p.fields.keepInTouch.toLowerCase()}.</div>` : ''}
       </div>
       <nav class="seg" role="tablist">${TABS.map(([k, l, ic]) => `<a role="tab" class="${k === tab ? 'on' : ''}" href="#/people/${id}?tab=${k}" aria-selected="${k === tab}">${icon(ic)}<span>${l}${k === 'notes' && notesAbout(p).length ? ` <em class="tab-count">${notesAbout(p).length}</em>` : ''}</span></a>`).join('')}</nav>
-      ${tab !== 'log' && tab !== 'notes' ? `<div class="tab-tools"><button class="link small" data-act="hideempty">${settings().personHideEmpty ? 'Show empty fields' : 'Hide empty fields'}</button></div>` : ''}
+      ${tab === 'profile' ? `<div class="tab-tools"><button class="link small" data-act="hideempty">${settings().personHideEmpty ? 'Show empty fields' : 'Hide empty fields'}</button></div>` : ''}
       <div class="tab-body">${tabHTML(p, tab)}</div>
     </div>`;
     main.querySelectorAll('textarea.autosize').forEach(a => { a.style.height = 'auto'; a.style.height = a.scrollHeight + 'px'; });
@@ -290,14 +285,13 @@ function renderPerson(main, id, query) {
   const saveFreeNotes = debounce(v => update({ notes: v }), 400);
   const saveName = debounce(v => v.trim() && update({ name: v.trim() }), 400);
   const saveSummary = debounce(v => update({ summary: v.trim() }), 400);
-  const saveB5 = debounce((k, v) => { const p = get('people', id); update({ big5: { ...(p.big5 || {}), [k]: v } }); }, 150);
   let mood = '';
 
   main.oninput = e => {
+    if (handlePersonalityInput(e, id)) return;
     if (e.target.matches('[data-freenotes]')) { e.target.style.height = 'auto'; e.target.style.height = e.target.scrollHeight + 'px'; saveFreeNotes(e.target.value); }
     if (e.target.matches('[data-name]')) saveName(e.target.value);
     if (e.target.matches('[data-summary]')) saveSummary(e.target.value);
-    if (e.target.matches('[data-b5]')) { e.target.classList.remove('unset'); e.target.closest('.b5-row').querySelector('.b5-head span').textContent = e.target.value; saveB5(e.target.dataset.b5, +e.target.value); }
   };
   main.onchange = async e => {
     if (e.target.matches('[data-photo]') && e.target.files[0]) {
@@ -319,6 +313,7 @@ function renderPerson(main, id, query) {
   };
   main.onclick = async e => {
     const redraw = () => { const st = main.scrollTop; draw(); main.scrollTop = st; };
+    if (handlePersonality(e, id, redraw)) return;
     const ln = e.target.closest('[data-link-note]');
     if (ln) { const nid = ln.dataset.linkNote; linkNote(nid, id); haptic(8); redraw(); toast('Linked', { action: 'Undo', onAction: () => { unlinkNote(nid, id); redraw(); } }); return; }
     const ul = e.target.closest('[data-unlink-note]');
@@ -396,8 +391,9 @@ function renderPerson(main, id, query) {
       const cur = get('people', id);
       if (nv !== v) update({ fields: { ...(cur.fields || {}), [key]: nv } });
       const tmp = document.createElement('div');
-      const def = [...SECTIONS.flatMap(s => s.fields), ...settings().customPersonFields.map(c => [c.key, c.label, c.type])].find(f => f[0] === key);
-      tmp.innerHTML = propRow(get('people', id), def) || '';
+      const def = findField(key, settings().customPersonFields);
+      const legacy = LEGACY_FIELDS.includes(def);
+      tmp.innerHTML = legacy && !nv ? '' : propRow(get('people', id), def) || '';
       if (tmp.firstElementChild) pr.replaceWith(tmp.firstElementChild); else pr.remove();
     };
     el.addEventListener('blur', commit);
@@ -428,10 +424,8 @@ function customizeFields(after) {
         const st = settings();
         const hidden = new Set(st.hiddenPersonFields);
         const box = (k, l) => `<label class="check-row"><input type="checkbox" data-fkey="${k}" ${hidden.has(k) ? '' : 'checked'}><span>${esc(l)}</span></label>`;
-        body.innerHTML = `<p class="muted small">Choose what you want to track about people. Hidden fields keep their data.</p>
-          ${TABS.filter(t => t[0] !== 'log').map(([tk, tl]) => `<h4 class="sub-label">${tl}</h4>
-            ${tk === 'psyche' ? `<div class="card pad check-grid">${box('big5', 'Big Five sliders')}</div>` : ''}
-            ${SECTIONS.filter(s => s.tab === tk).map(s => `<div class="card pad"><div class="row-between"><b>${esc(s.title)}</b><button class="link small" data-sec="${s.id}">toggle all</button></div><div class="check-grid">${s.fields.map(f => box(f[0], f[1])).join('')}</div></div>`).join('')}`).join('')}
+        body.innerHTML = `<p class="muted small">Choose which profile fields to show. Hidden fields keep their data. The Personality tab is always there.</p>
+          ${SECTIONS.map(s => `<div class="card pad"><div class="row-between"><b>${esc(s.title)}</b><button class="link small" data-sec="${s.id}">toggle all</button></div><div class="check-grid">${s.fields.map(f => box(f[0], f[1])).join('')}</div></div>`).join('')}
           <h4 class="sub-label">Your own fields</h4>
           <div class="card pad">${st.customPersonFields.map(c => `<div class="row-between"><span>${esc(c.label)} <span class="faint small">${c.type === 'long' ? 'paragraph' : c.type}</span></span><button class="icon-btn sm" data-cdel="${c.key}" aria-label="Remove">${icon('trash')}</button></div>`).join('') || '<p class="muted small">None yet.</p>'}
             <form class="row" data-cadd><input class="input grow" name="label" placeholder="e.g. Star sign, Shoe size, Coffee order" required><select class="input" name="type" style="width:auto"><option value="text">Short</option><option value="long">Paragraph</option><option value="date">Date</option></select><button class="btn primary">Add</button></form></div>`;
@@ -469,11 +463,11 @@ function customizeFields(after) {
 function exportPerson(p) {
   const lines = [`# ${p.name}`, p.summary || '', p.circle ? `Circle: ${p.circle}` : '', (p.tags || []).map(t => '#' + t).join(' '), ''];
   const custom = settings().customPersonFields;
-  [...SECTIONS, { title: 'Custom', fields: custom.map(c => [c.key, c.label]) }].forEach(s => {
+  [...SECTIONS, { title: 'Custom', fields: custom.map(c => [c.key, c.label]) }, { title: 'Earlier details', fields: LEGACY_FIELDS }].forEach(s => {
     const rows = s.fields.filter(f => p.fields?.[f[0]]).map(f => `- **${f[1]}:** ${p.fields[f[0]]}`);
     if (rows.length) lines.push(`## ${s.title}`, ...rows, '');
   });
-  if (Object.keys(p.big5 || {}).length) lines.push('## Big Five', ...BIG_FIVE.filter(b => p.big5[b[0]] != null).map(b => `- ${b[1]}: ${p.big5[b[0]]}/100`), '');
+  lines.push(...personalityText(p));
   if (p.notes) lines.push('## Notes', p.notes, '');
   if (p.interactions?.length) lines.push('## Log', ...[...p.interactions].sort((a, b) => a.date.localeCompare(b.date)).map(i => `- ${i.date}${i.where ? ' @ ' + i.where : ''}${i.mood ? ' ' + i.mood : ''}: ${i.note}`));
   import('../util.js').then(u => u.download(`${p.name.replace(/[^\w-]+/g, '-')}.md`, lines.filter((l, i, a) => l || a[i - 1]).join('\n'), 'text/markdown'));
