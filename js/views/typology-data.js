@@ -283,3 +283,48 @@ export function nearCusp(date) {
   const y = 2001, d = new Date(`${y}-${date.slice(5)}T12:00`);
   return ZODIAC.some(z => Math.abs((new Date(`${y}-${z[3]}T12:00`) - d) / 864e5) <= 1);
 }
+
+// ---------- Big Five facets (NEO PI-R, Costa & McCrae 1992) ----------
+// [code, name, high, low]
+export const FACETS = {
+  O: [
+    ['O1', 'Fantasy', 'vivid imagination, daydreams, rich inner world', 'grounded in the here and now; rarely daydreams'],
+    ['O2', 'Aesthetics', 'moved by art, music, nature and beauty', 'little interest in art or beauty for its own sake'],
+    ['O3', 'Feelings', 'notices and values their own emotions; feels deeply', 'pays little attention to inner feelings'],
+    ['O4', 'Actions', 'loves trying new foods, places and activities', 'prefers the familiar; sticks to routines'],
+    ['O5', 'Ideas', 'intellectually curious; enjoys puzzles, theories and debate', 'focused on the practical; abstract talk bores them'],
+    ['O6', 'Values', 'questions authority and tradition; open-minded on social issues', 'respects tradition and established values'],
+  ],
+  C: [
+    ['C1', 'Competence', 'feels capable, prepared and effective', 'often feels unprepared or not up to it'],
+    ['C2', 'Order', 'tidy, organised, likes things in their place', 'messy; comfortable with disorder'],
+    ['C3', 'Dutifulness', 'keeps promises, follows rules and ethics strictly', 'casual about obligations and rules'],
+    ['C4', 'Achievement striving', 'ambitious, high standards, driven to excel', 'content with “good enough”; low ambition'],
+    ['C5', 'Self-discipline', 'starts and finishes tasks despite boredom', 'procrastinates; gives up when it gets dull'],
+    ['C6', 'Deliberation', 'thinks carefully before acting', 'acts on impulse; decides quickly'],
+  ],
+  E: [
+    ['E1', 'Warmth', 'affectionate and friendly; easily close to people', 'formal and reserved, even with people they like'],
+    ['E2', 'Gregariousness', 'loves crowds, parties and company', 'avoids crowds; prefers being alone or with a few'],
+    ['E3', 'Assertiveness', 'takes charge, speaks up, leads', 'stays in the background; lets others lead'],
+    ['E4', 'Activity', 'fast-paced, busy, full of energy', 'leisurely, unhurried pace'],
+    ['E5', 'Excitement seeking', 'craves thrills, noise and stimulation', 'avoids risk and loud, hectic places'],
+    ['E6', 'Positive emotions', 'cheerful, laughs easily, upbeat', 'serious and less exuberant (not necessarily unhappy)'],
+  ],
+  A: [
+    ['A1', 'Trust', 'assumes others mean well', 'suspicious; assumes others may be dishonest'],
+    ['A2', 'Straightforwardness', 'frank and sincere; doesn’t manipulate', 'guarded; willing to flatter or manipulate'],
+    ['A3', 'Altruism', 'generous with time and help', 'reluctant to get involved in others’ problems'],
+    ['A4', 'Compliance', 'gives in to avoid conflict; forgives easily', 'competitive; fights back; holds a grudge'],
+    ['A5', 'Modesty', 'humble; plays down their achievements', 'confident they’re superior; shows it'],
+    ['A6', 'Tender-mindedness', 'moved by others’ needs; compassionate', 'hard-headed; decides on logic, not sympathy'],
+  ],
+  N: [
+    ['N1', 'Anxiety', 'worries, tense, fearful', 'calm and relaxed; rarely worries'],
+    ['N2', 'Angry hostility', 'quick to anger, frustration and bitterness', 'slow to anger; easygoing'],
+    ['N3', 'Depression', 'prone to sadness, guilt and hopelessness', 'rarely down for long'],
+    ['N4', 'Self-consciousness', 'easily embarrassed; shy; sensitive to ridicule', 'comfortable in social situations; hard to embarrass'],
+    ['N5', 'Impulsiveness', 'gives in to cravings and urges (food, spending, etc.)', 'resists temptation easily'],
+    ['N6', 'Vulnerability', 'panics or feels helpless under stress', 'stays steady in a crisis'],
+  ],
+};

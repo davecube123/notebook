@@ -12,7 +12,7 @@ import {
   TRAITS, LEVEL, traitsOf, TEMPERAMENTS, VARIANTS, QUESTIONS, resolveKeirsey, keirseyOf,
   ENNEA, ENNEA_PARTS, enneaOf, enneaVerdict, ENNEA_TEST, resolveEnnea, enneaNeighbours,
   DEFENSE_LEVELS, DEFENSE, BLUEPRINTS, BP_QUESTIONS, resolveBlueprint, ZODIAC, signFor, nearCusp,
-  TRAIT_RELATE, TEMP_RELATE, ENNEA_RELATE, DEFENSE_RELATE,
+  TRAIT_RELATE, TEMP_RELATE, ENNEA_RELATE, DEFENSE_RELATE, FACETS,
 } from './typology-data.js';
 
 const info = (summary, body) => `<details class="ty-info"><summary>${icon('info')}${summary}</summary><div>${body}</div></details>`;
@@ -28,6 +28,7 @@ export const zodiacOf = p => ZODIAC.find(z => z[0] === p.zodiac) || signFor(p.fi
 
 export function personalityTab(p) {
   const first = p.name.split(/\s+/)[0];
+  const fc = p.facets || {};
   const tr = traitsOf(p), kv = keirseyOf(p), en = enneaOf(p), bp = blueprintOf(p), er = p.erotic || {}, zs = zodiacOf(p);
   const defs = (p.defenses || []).filter(k => DEFENSE.has(k)), dnotes = p.defenseNotes || {};
   const filled = [Object.keys(tr).length === 5, !!kv, !!(en.desire || en.fear || en.passion), !!bp.primary, defs.length > 0, !!zs].filter(Boolean).length;
@@ -38,7 +39,8 @@ export function personalityTab(p) {
     const desc = !v ? '<span class="faint">Not rated</span>' : v <= 2 ? `<b>${LEVEL[v]}:</b> ${t.low}` : v >= 4 ? `<b>${LEVEL[v]}:</b> ${t.high}` : '<b>Average:</b> a mix of both, depending on the situation';
     return `<div class="ty-trait"><div class="ty-trait-head"><b>${t.name}</b>${t.alt ? `<span class="faint small">${t.alt}</span>` : ''}</div>
       ${scale5('data-trait', t.k, v, t.name)}<div class="ty-desc small">${desc}</div>
-      ${info('What to look for', `<p>${esc(t.what)}</p><p><b>High:</b> ${esc(t.high)}.<br><b>Low:</b> ${esc(t.low)}.</p><p class="muted">${esc(t.look)}</p>`)}</div>`;
+      ${info('What to look for', `<p>${esc(t.what)}</p><p><b>High:</b> ${esc(t.high)}.<br><b>Low:</b> ${esc(t.low)}.</p><p class="muted">${esc(t.look)}</p>`)}
+      ${facetsHTML(t, fc, v)}</div>`;
   }).join('');
   const b5relate = relate(first, TRAITS.filter(t => tr[t.k] && tr[t.k] !== 3).map(t => [`${tr[t.k] > 3 ? 'High' : 'Low'} ${t.name.toLowerCase()}`, ...TRAIT_RELATE[t.k][tr[t.k] > 3 ? 'hi' : 'lo']]));
 
@@ -94,7 +96,7 @@ export function personalityTab(p) {
 
   return `
     <p class="muted small pad-x ty-intro">Your read of ${esc(first)}, ${filled}/6 lenses filled. Tap <b>ⓘ</b> to learn what to look for. These are impressions to refine over time, not diagnoses.</p>
-    ${card('Big Five traits', Object.keys(tr).length ? `${Object.keys(tr).length}/5` : '', big5 + b5relate + info('About the Big Five', '<p>The most researched model of personality (Costa &amp; McCrae). Each trait is a spectrum; most people sit near the middle. Ratings by people who know someone well are valid and add to what they would say about themselves (Vazire, 2010).</p>'))}
+    ${card('Big Five traits', Object.keys(tr).length ? `${Object.keys(tr).length}/5` : '', big5 + b5relate + info('About the Big Five', '<p>The most researched model of personality (Costa &amp; McCrae). Each trait is a spectrum; most people sit near the middle. Each also splits into six <b>facets</b> (the NEO PI-R’s 30), which show where within a trait someone stands out: two people with the same Extraversion can differ a lot in Warmth versus Excitement seeking. Ratings by people who know someone well are valid and add to what they would say about themselves (Vazire, 2010).</p>'))}
     ${card('Temperament', 'Please Understand Me II', keirsey + info('About Keirsey’s temperaments', '<p>David Keirsey sorts people by two things you can observe: what they talk about (<b>concrete</b> vs <b>abstract</b>) and how they pursue goals (<b>cooperative</b> vs <b>utilitarian</b>). That gives four temperaments: Artisan, Guardian, Idealist and Rational. Each splits into two roles and four of the 16 types (e.g. Champion = ENFP).</p><p class="muted">Popular and practical, but with weaker scientific support than the Big Five. Treat it as a lens.</p>'))}
     ${card('Enneagram core', '', ennea + info('About the Enneagram core', '<p>Each of the nine types is driven by a <b>core desire</b>, defended against a <b>core fear</b> (Riso &amp; Hudson), and has a <b>passion</b>, the “sin” or emotional habit that takes over (Ichazo, Naranjo). Picking them separately lets you notice when someone does not fit one type neatly.</p><p>The quick test crosses two groupings Riso &amp; Hudson use in their QUEST sorter: how someone goes after what they want, and how they react when things go wrong. Each pair points to one type.</p><p class="muted">A reflection tool with little scientific validation.</p>'))}
     ${card('Erotic blueprint', bpP ? '' : 'Jaiya', blueprint)}
@@ -108,6 +110,18 @@ export function personalityTab(p) {
       <p>Vaillant, G. (1992). <i>Ego Mechanisms of Defense.</i> · American Psychiatric Association (1994). <i>DSM-IV</i>, Defensive Functioning Scale.</p>
       <p>Carlson, S. (1985). A double-blind test of astrology. <i>Nature</i> 318.</p>
     </details>`;
+}
+
+// The six NEO PI-R facets under a trait. Which groups are open survives redraws.
+const openFacets = new Set();
+function facetsHTML(t, fc, cur) {
+  const rated = FACETS[t.k].filter(f => fc[f[0]]);
+  const avg = rated.length ? rated.reduce((s, f) => s + fc[f[0]], 0) / rated.length : null;
+  return `<details class="ty-facets" data-facets="${t.k}" ${openFacets.has(t.k) ? 'open' : ''}><summary>${icon('chevR')}<span>6 facets${rated.length ? ` · ${rated.length} rated · average ${avg.toFixed(1)}` : ''}</span></summary>
+    ${FACETS[t.k].map(([c, name, hi, lo]) => { const v = fc[c]; return `<div class="ty-facet"><div class="ty-facet-head"><b>${esc(name)}</b>${scale5('data-facet', c, v, name)}</div>
+      <div class="ty-desc small">${!v ? `<span class="muted">High: ${esc(hi)}. Low: ${esc(lo)}.</span>` : v === 3 ? '<b>Average</b>' : `<b>${LEVEL[v]}:</b> ${esc(v > 3 ? hi : lo)}`}</div></div>`; }).join('')}
+    ${rated.length >= 3 && Math.round(avg) !== cur ? `<button class="link small" data-trait="${t.k}" data-v="${Math.round(avg)}">Set ${esc(t.name)} to ${Math.round(avg)}, the facet average</button>` : ''}
+  </details>`;
 }
 
 // the type most of the three parts point to (fear breaks ties)
@@ -130,10 +144,14 @@ function defenseVerdict(chosenByLevel) {
 // ---------- interaction ----------
 // Returns true when the click was handled. `redraw` re-renders the person page.
 export function handlePersonality(e, id, redraw) {
-  if (e.target.closest('[data-trait], [data-ty]')) flushPersonality(); // so a redraw never shows a stale note
+  if (e.target.closest('[data-trait], [data-facet], [data-ty]')) flushPersonality(); // so a redraw never shows a stale note
   const p = () => get('people', id);
   const put = patch => save('people', { ...p(), ...patch, updated: Date.now() }, { silent: true });
   const undoable = (msg, patch) => { const prev = Object.fromEntries(Object.keys(patch).map(k => [k, p()[k]])); put(patch); redraw(); toast(msg, { action: 'Undo', onAction: () => { put(prev); redraw(); } }); };
+  const fs = e.target.closest('.ty-facets > summary');
+  if (fs) { const k = fs.parentElement.dataset.facets; openFacets.has(k) ? openFacets.delete(k) : openFacets.add(k); return true; } // native toggle still runs
+  const fb = e.target.closest('[data-facet]');
+  if (fb) { const fc = { ...(p().facets || {}) }, k = fb.dataset.facet, v = +fb.dataset.v; fc[k] === v ? delete fc[k] : fc[k] = v; put({ facets: fc }); haptic(5); redraw(); return true; }
   const tb = e.target.closest('[data-trait]');
   if (tb) { const tr = { ...traitsOf(p()) }, k = tb.dataset.trait, v = +tb.dataset.v; tr[k] === v ? delete tr[k] : tr[k] = v; put({ traits: tr }); haptic(5); redraw(); return true; }
   const b = e.target.closest('[data-ty]');
@@ -351,7 +369,11 @@ const fmtMD = md => new Date(`2001-${md}T12:00`).toLocaleDateString(undefined, {
 export function personalityText(p) {
   const out = [];
   const tr = traitsOf(p);
-  if (Object.keys(tr).length) out.push('## Big Five', ...TRAITS.filter(t => tr[t.k]).map(t => `- ${t.name}: ${tr[t.k]}/5 (${LEVEL[tr[t.k]]})`), '');
+  const fc = p.facets || {};
+  const b5 = TRAITS.filter(t => tr[t.k] || FACETS[t.k].some(f => fc[f[0]])).flatMap(t => [
+    `- ${t.name}: ${tr[t.k] ? `${tr[t.k]}/5 (${LEVEL[tr[t.k]]})` : 'not rated'}`,
+    ...FACETS[t.k].filter(f => fc[f[0]]).map(f => `  - ${f[1]}: ${fc[f[0]]}/5`)]);
+  if (b5.length) out.push('## Big Five', ...b5, '');
   const kv = keirseyOf(p);
   if (kv) out.push('## Temperament', `${kv[3]} (${kv[0]}), ${TEMPERAMENTS[kv[1]].name} ${kv[2]}`, '');
   const en = enneaOf(p);
