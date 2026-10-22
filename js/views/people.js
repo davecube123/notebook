@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { navigate, rerender } from '../router.js';
 import { sheet, toast, confirmDialog, menu } from '../ui.js';
 import { SECTIONS, LEGACY_FIELDS, findField, TABS, CIRCLES } from './fields.js';
-import { personalityTab, handlePersonality, handlePersonalityInput, personalityText } from './typology.js';
+import { personalityTab, handlePersonality, handlePersonalityInput, flushPersonality, personalityText } from './typology.js';
 import { notesAbout, possibleNotes, namesakes, personLine, contextFor, linkNote, unlinkNote, notThem, mentionHTML, nameTerms } from './mentions.js';
 import { newNote, noteTitle } from './notes.js';
 
@@ -410,6 +410,7 @@ function renderPerson(main, id, query) {
       const nm = main.querySelector('[data-name]'); if (nm) saveName.flush(nm.value);
       const sm = main.querySelector('[data-summary]'); if (sm) saveSummary.flush(sm.value);
     }
+    flushPersonality();
     main.onclick = main.oninput = main.onchange = main.onkeydown = main.onsubmit = null;
   };
 }

@@ -905,3 +905,18 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .ty-check b { color: var(--ink); font-size: 15px; }
 .ty-intro { margin: 4px 0 18px; }
 .ty-check .faint { color: var(--muted); }
+.ty-relate { display: grid; gap: 6px; padding: 12px 14px; border-radius: 12px; background: var(--fill-2); }
+.ty-relate .feel-label { margin: 0 0 2px; }
+.ty-relate-for { font-size: 13px; font-weight: 600; color: var(--ink-2); margin-top: 4px; }
+.ty-do, .ty-dont { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 8px; font-size: 14.5px; line-height: 1.4; }
+.ty-do .ic, .ty-dont .ic { width: 16px; height: 16px; margin-top: 2px; stroke-width: 2.4; }
+.ty-do .ic { color: var(--q-green); }
+.ty-dont .ic { color: var(--q-red); }
+.ty-disclaimer { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 8px; margin: 0; font-size: 13px; line-height: 1.45; color: var(--muted); }
+.ty-disclaimer .ic { width: 15px; height: 15px; margin-top: 2px; }
+.ty-def { display: grid; gap: 4px; margin-top: 6px; }
+.ty-def textarea { margin-top: 4px; font-size: 15px; }
+.ty-def-level + .ty-def-level { margin-top: 8px; }
+.ty-pick.static { cursor: default; }
+.ty-card .ty-pick:last-child { border-bottom: 0; }
+.ty-option.compact:not(.ty-grid > *) { margin-top: 8px; }
