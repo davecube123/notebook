@@ -270,7 +270,7 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
           <div class="tag-list"></div>
           <div class="tag-input-wrap"><span class="hash">#</span><input class="tag-input" placeholder="add tag" aria-label="Add tag" autocomplete="off" autocapitalize="off" enterkeyhint="done"><div class="tag-suggest"></div></div>
         </div>
-        <div class="note-body" contenteditable="true" spellcheck="true" data-placeholder="Start writing… Type  [ ]  for a checklist,  -  for bullets,  >  for a quote,  #  for a heading."></div>
+        <div class="note-body" contenteditable="true" spellcheck="true" data-placeholder="Start writing… Add #tags anywhere. Type  [ ]  for a checklist,  -  for bullets,  >  for a quote."></div>
       </div>
     </div>
     <div class="toolbar" role="toolbar" aria-label="Formatting">${toolbarHTML()}</div>
@@ -297,15 +297,23 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
   const setStatus = () => { status.textContent = `${words()} words · edited ${fmtDateTime(note.updated)}`; };
   setStatus();
 
-  const persist = () => {
+  // #tags typed in the text become tags once finished (followed by a space or line break;
+  // on leaving, the end of the note counts too). Tags removed by hand aren't re-added.
+  const removedTags = new Set();
+  const inlineTags = (text, final) => [...text.matchAll(final ? /(^|\s)#([a-z][\w/-]*)(?=\s|$)/gi : /(^|\s)#([a-z][\w/-]*)(?=\s)/gi)]
+    .map(m => normTag(m[2])).filter(t => t && !removedTags.has(t));
+
+  const persist = (final = false) => {
     note = get('notes', id) || note;
     const html = body.innerHTML === '<br>' ? '' : body.innerHTML;
     const title = titleEl.value.trim();
     const text = htmlToText(html);
-    if ((html === savedHtml || html === note.html) && title === note.title) return;
+    const newTags = inlineTags(text, final).filter(t => !(note.tags || []).includes(t));
+    if ((html === savedHtml || html === note.html) && title === note.title && !newTags.length) return;
     savedHtml = html;
-    note = { ...note, html, title, text, updated: Date.now(), todo: countTodos(body), draft: false };
+    note = { ...note, html, title, text, tags: [...new Set([...(note.tags || []), ...newTags])], updated: Date.now(), todo: countTodos(body), draft: false };
     save('notes', note, { silent: true });
+    if (newTags.length) drawTags();
     setStatus();
     onChange?.(note);
   };
@@ -337,13 +345,13 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
   tagInput.addEventListener('blur', () => setTimeout(() => { suggest.classList.remove('open'); if (tagInput.value.trim()) addTag(tagInput.value); }, 150));
   tagInput.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ',' || (e.key === ' ' && tagInput.value.trim())) { e.preventDefault(); addTag(tagInput.value); showSuggest(); }
-    if (e.key === 'Backspace' && !tagInput.value && note.tags.length) { note = { ...note, tags: note.tags.slice(0, -1) }; save('notes', note, { silent: true }); drawTags(); onChange?.(note); }
+    if (e.key === 'Backspace' && !tagInput.value && note.tags.length) { removedTags.add(note.tags.at(-1)); note = { ...note, tags: note.tags.slice(0, -1) }; save('notes', note, { silent: true }); drawTags(); onChange?.(note); }
   });
   view.addEventListener('mousedown', e => { if (e.target.closest('[data-addtag]')) e.preventDefault(); });
   view.addEventListener('click', e => {
     const a = e.target.closest('[data-addtag]'); if (a) { addTag(a.dataset.addtag); tagInput.focus(); return; }
     const r = e.target.closest('[data-rmtag]');
-    if (r) { note = get('notes', id); note = { ...note, tags: note.tags.filter(t => t !== r.dataset.rmtag), updated: Date.now() }; save('notes', note, { silent: true }); drawTags(); onChange?.(note); }
+    if (r) { removedTags.add(r.dataset.rmtag); note = get('notes', id); note = { ...note, tags: note.tags.filter(t => t !== r.dataset.rmtag), updated: Date.now() }; save('notes', note, { silent: true }); drawTags(); onChange?.(note); }
   });
 
   // title
@@ -452,9 +460,9 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
     const b = e.target.closest('[data-act]');
     if (!b) return;
     const act = b.dataset.act;
-    if (act === 'back' || act === 'done') { persistSoon.flush(); history.length > 1 ? history.back() : navigate('#/notes'); }
+    if (act === 'back' || act === 'done') { persistSoon.flush(true); history.length > 1 ? history.back() : navigate('#/notes'); }
     if (act === 'pin') {
-      persistSoon.flush(); note = get('notes', id);
+      persistSoon.flush(true); note = get('notes', id);
       note = { ...note, pinned: !note.pinned, draft: false }; save('notes', note, { silent: true });
       b.classList.toggle('on', note.pinned); onChange?.(note); toast(note.pinned ? 'Pinned' : 'Unpinned'); haptic();
     }
@@ -465,7 +473,7 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
   });
 
   function moreMenu(anchor) {
-    persistSoon.flush(); note = get('notes', id);
+    persistSoon.flush(true); note = get('notes', id);
     menu(anchor, [
       { label: note.archived ? 'Unarchive' : 'Archive', icon: 'archive', action: () => { save('notes', { ...note, archived: !note.archived, draft: false }); toast(note.archived ? 'Moved to Notes' : 'Archived'); navigate('#/notes'); } },
       { label: 'Duplicate', icon: 'copy', action: () => { const n = { ...note, id: uid(), title: (note.title || 'Untitled') + ' copy', created: Date.now(), updated: Date.now(), pinned: false }; save('notes', n); navigate(`#/notes/${n.id}`); } },
@@ -483,22 +491,22 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
     ]);
   }
 
-  // Focus: new notes start in the title, existing ones stay put
-  if (!note.title && !note.text && !note.trashed) setTimeout(() => titleEl.focus(), 50);
+  // Focus: new notes start straight in the body (the first line names the note), existing ones stay put
+  if (!note.title && !note.text && !note.trashed) setTimeout(() => { body.focus(); placeCaretIn(body); }, 50);
 
   // Discard empty drafts when leaving
   const offLeave = onLeave(next => {
     if (next.params?.id === id) return;
-    persistSoon.flush();
+    persistSoon.flush(true);
     const n = get('notes', id);
     // still a draft = never touched, so tags it inherited from the search don't keep it alive
     if (n && !n.title && !n.text && !n.html.includes('<hr') && (n.draft || !(n.tags || []).length)) remove('notes', id);
   });
-  const beforeUnload = () => persistSoon.flush();
+  const beforeUnload = () => persistSoon.flush(true);
   window.addEventListener('pagehide', beforeUnload);
 
   return () => {
-    persistSoon.flush();
+    persistSoon.flush(true);
     offLeave();
     document.removeEventListener('selectionchange', onSel);
     vv?.removeEventListener('resize', onVV); vv?.removeEventListener('scroll', onVV);
