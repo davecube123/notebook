@@ -105,6 +105,47 @@ function toggleChecklist(editor) {
   const nu = closestIn(editor, 'ul');
   nu?.classList.add('checklist');
 }
+// ---------- nesting (indent / outdent list items) ----------
+// Works the same for checklists, bullets and numbers: an item moves under the item above it,
+// keeping its own list type, so you can put sub-tasks under a task or notes under a checkbox.
+function keepCaret(fn) {
+  const s = getSelection();
+  const r = s.rangeCount ? s.getRangeAt(0) : null;
+  const saved = r && [r.startContainer, r.startOffset, r.endContainer, r.endOffset];
+  fn();
+  if (!saved) return;
+  try { const nr = document.createRange(); nr.setStart(saved[0], saved[1]); nr.setEnd(saved[2], saved[3]); s.removeAllRanges(); s.addRange(nr); } catch {}
+}
+const sameListAs = list => { const l = document.createElement(list.tagName); if (list.classList.contains('checklist')) l.className = 'checklist'; return l; };
+const subListOf = li => [...li.children].reverse().find(c => c.tagName === 'UL' || c.tagName === 'OL') || null;
+
+export function indentItem(li) {
+  const prev = li.previousElementSibling;
+  if (!prev || prev.tagName !== 'LI') return false;
+  const list = li.parentElement;
+  keepCaret(() => {
+    let sub = subListOf(prev);
+    // join an existing sub-list of the same kind, otherwise start one
+    if (!sub || sub.tagName !== list.tagName || sub.classList.contains('checklist') !== list.classList.contains('checklist')) { sub = sameListAs(list); prev.append(sub); }
+    sub.append(li);
+  });
+  return true;
+}
+export function outdentItem(li, editor) {
+  const list = li.parentElement, parentLi = list.parentElement;
+  if (!parentLi || parentLi.tagName !== 'LI' || !editor.contains(parentLi)) return false;
+  keepCaret(() => {
+    // items after this one become its children, so the order on screen doesn't change
+    const after = [];
+    for (let n = li.nextElementSibling; n; n = n.nextElementSibling) after.push(n);
+    if (after.length) { let sub = subListOf(li); if (!sub) { sub = sameListAs(list); li.append(sub); } sub.append(...after); }
+    parentLi.after(li);
+    if (!list.children.length) list.remove();
+  });
+  return true;
+}
+const isNested = (li, editor) => { const g = li.parentElement?.parentElement; return !!g && g.tagName === 'LI' && editor.contains(g); };
+
 function toggleList(editor, ordered) {
   const cl = closestIn(editor, 'ul.checklist');
   if (cl && !ordered) { cl.classList.remove('checklist'); return; }
@@ -200,7 +241,7 @@ function tryShortcut(editor) {
 // ---------- toolbar ----------
 // Most-used first: on a phone only the first ~9 fit without scrolling
 const TOOLS = [
-  ['checklist', 'Checklist (⌘⇧C)', 'checklist'], ['list', 'Bulleted list', 'list'], ['olist', 'Numbered list', 'olist'], ['quote', 'Quote', 'quote'], '|',
+  ['checklist', 'Checklist (⌘⇧C)', 'checklist'], ['list', 'Bulleted list', 'list'], ['olist', 'Numbered list', 'olist'], ['indent', 'Nest under the item above (Tab)', 'indent'], ['outdent', 'Move out a level (⇧Tab)', 'outdent'], ['quote', 'Quote', 'quote'], '|',
   ['bold', 'Bold (⌘B)', 'bold'], ['italic', 'Italic (⌘I)', 'italic'], ['underline', 'Underline (⌘U)', 'underline'], ['strike', 'Strikethrough', 'strike'], ['highlight', 'Highlight', 'highlight'], '|',
   ['h1', 'Heading', 'h1'], ['h2', 'Subheading', 'h2'], ['code', 'Code block', 'code'], ['divider', 'Divider', 'divider'], ['link', 'Link (⌘K)', 'link'], '|',
   ['clear', 'Clear formatting', 'clear'], ['undo', 'Undo', 'undo'], ['redo', 'Redo', 'redo'],
@@ -222,6 +263,13 @@ function runCmd(editor, cmd, savedRange) {
     case 'checklist': return toggleChecklist(editor);
     case 'list': return toggleList(editor, false);
     case 'olist': return toggleList(editor, true);
+    case 'indent': case 'outdent': {
+      const li = closestIn(editor, 'li');
+      if (!li) return toast('Put the cursor in a list item first');
+      const done = cmd === 'indent' ? indentItem(li) : outdentItem(li, editor);
+      if (!done) toast(cmd === 'indent' ? 'Nothing above to nest under' : 'Already at the top level');
+      return;
+    }
     case 'divider': return document.execCommand('insertHorizontalRule');
     case 'link': return insertLink(editor, savedRange);
     case 'clear': {
@@ -244,6 +292,9 @@ function updateToolbarState(editor, tb) {
     underline: is('u'), strike: is('s, strike, del'),
     checklist: is('ul.checklist'), list: is('ul:not(.checklist)'), olist: is('ol'), highlight: is('mark'), link: is('a'),
   };
+  const li = closestIn(editor, 'li');
+  tb.querySelector('[data-cmd=indent]')?.classList.toggle('dim', !li?.previousElementSibling);
+  tb.querySelector('[data-cmd=outdent]')?.classList.toggle('dim', !li || !isNested(li, editor));
   tb.querySelectorAll('[data-cmd]').forEach(b => b.classList.toggle('on', !!st[b.dataset.cmd]));
 }
 
@@ -382,10 +433,13 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
     if (mod && e.shiftKey && e.key === '8') { e.preventDefault(); toggleList(body, false); }
     if (mod && e.altKey && (e.key === '1' || e.key === '2')) { e.preventDefault(); toggleBlock(body, 'h' + e.key); }
     if (e.key === 'Tab') {
-      if (closestIn(body, 'li')) { e.preventDefault(); document.execCommand(e.shiftKey ? 'outdent' : 'indent'); }
+      const li = closestIn(body, 'li');
+      if (li) { e.preventDefault(); (e.shiftKey ? outdentItem(li, body) : indentItem(li)) && persistSoon(); }
     }
     if (e.key === 'Enter' && !e.shiftKey) {
       const li = closestIn(body, 'li');
+      // empty nested item + Enter moves it out a level, like Notes and Notion
+      if (li && !li.textContent.trim() && !subListOf(li) && isNested(li, body)) { e.preventDefault(); outdentItem(li, body); persistSoon(); return; }
       // empty list item + Enter exits the list; new checklist items start unchecked
       setTimeout(() => { const nli = closestIn(body, 'ul.checklist > li'); if (nli && !nli.textContent.trim()) nli.classList.remove('checked'); });
       const pre = closestIn(body, 'pre');
@@ -394,6 +448,12 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
       if (bq && !bq.textContent.trim()) { e.preventDefault(); retag(bq, 'p'); placeCaretIn(topBlock(body, caretNode()) || body); }
     }
     if (e.key === 'Backspace') {
+      // backspace at the start of a nested item moves it out a level
+      const nli = closestIn(body, 'li'), sel = getSelection();
+      if (nli && sel.isCollapsed && isNested(nli, body)) {
+        const r = sel.getRangeAt(0).cloneRange(); r.setStart(nli, 0);
+        if (!r.toString().length) { e.preventDefault(); outdentItem(nli, body); persistSoon(); return; }
+      }
       // backspace at start of a styled block turns it back into a paragraph
       const blk = topBlock(body, caretNode());
       const s = getSelection();
@@ -410,7 +470,9 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
       const x = e.clientX - li.getBoundingClientRect().left;
       if (x < 30) {
         e.preventDefault();
-        li.classList.toggle('checked'); haptic(8);
+        const on = li.classList.toggle('checked'); haptic(8);
+        // ticking a task ticks its sub-tasks too
+        if (on) li.querySelectorAll('ul.checklist > li').forEach(c => c.classList.add('checked'));
         persist();
         return;
       }

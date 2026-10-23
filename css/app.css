@@ -344,6 +344,13 @@ a.list-row:hover { background: var(--surface-2); }
 .note-body ul.checklist > li.checked::before { background: var(--accent); border-color: var(--accent); }
 .note-body ul.checklist > li.checked::after { content: ""; position: absolute; left: 10px; top: calc(.2em + 4.5px); width: 6px; height: 10px; border: solid #fff; border-width: 0 2.2px 2.2px 0; transform: rotate(45deg); pointer-events: none; }
 .note-body ul.checklist ul.checklist { padding-left: 4px; margin-top: .15em; }
+/* nested lists: a ticked task's strike-through and grey stay on its own line, not its sub-items.
+   (inline-block stops text-decoration from propagating into the child list) */
+.note-body li > ul, .note-body li > ol { display: inline-block; width: 100%; vertical-align: top; margin: .15em 0 0; }
+.note-body li.checked > ul, .note-body li.checked > ol { color: var(--ink); }
+.note-body ul.checklist > li > ul:not(.checklist), .note-body ul.checklist > li > ol { padding-left: 1.3em; }
+.note-body li > ul.checklist { padding-left: 0; }
+.tb-btn.dim { opacity: .35; }
 
 .toolbar {
   display: flex; align-items: center; gap: 2px; padding: 6px 8px calc(6px + var(--safe-b)); overflow-x: auto; scrollbar-width: none;

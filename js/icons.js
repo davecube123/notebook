@@ -29,6 +29,8 @@ const P = {
   h1: '<path d="M4 6v12M12 6v12M4 12h8M17 10l3-2v10"/>',
   h2: '<path d="M4 6v12M12 6v12M4 12h8M16 10a2 2 0 1 1 4 .5c0 1.5-4 4-4 7.5h4"/>',
   list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
+  indent: '<path d="M10 6h10M10 12h10M10 18h10M4 9l3 3-3 3"/>',
+  outdent: '<path d="M10 6h10M10 12h10M10 18h10M7 9l-3 3 3 3"/>',
   olist: '<path d="M10 6h10M10 12h10M10 18h10M4 4.5h1.5V9M4 9h3M4 14.5a1.5 1.5 0 0 1 3 .3c0 1-3 2.2-3 3.7h3"/>',
   checklist: '<rect x="3" y="4" width="6" height="6" rx="1.5"/><path d="m4.5 7 1 1 2-2M13 7h8M3 15.5h6v.5M13 17h8"/><rect x="3" y="14" width="6" height="6" rx="1.5"/>',
   quote: '<path d="M7 7h4v4c0 3-1.5 5-4 6M15 7h4v4c0 3-1.5 5-4 6"/>',
