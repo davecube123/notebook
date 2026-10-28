@@ -113,7 +113,6 @@ export const findField = (key, custom = []) =>
   [...SECTIONS.flatMap(s => s.fields), ...LEGACY_FIELDS, ...custom.map(c => [c.key, c.label, c.type])].find(f => f[0] === key);
 
 export const TABS = [
-  ['profile', 'Profile', 'people'],
   ['personality', 'Personality', 'brain'],
   ['log', 'Log', 'history'],
   ['notes', 'Notes', 'notes'],

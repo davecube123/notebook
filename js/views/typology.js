@@ -1,9 +1,7 @@
-// Personality reading for a person: six lenses, each explained as you fill it in,
+// Personality reading for a person: four lenses, each explained as you fill it in,
 // each with a short guide on how to relate to them.
 //   Big Five (Costa & McCrae) · Temperament (Keirsey, Please Understand Me II) ·
-//   Enneagram core desire / fear / passion (Riso & Hudson; Ichazo, Naranjo) ·
-//   Erotic Blueprints (Jaiya) · Defense mechanisms, DSM-IV Defensive Functioning Scale ·
-//   Zodiac sun sign.
+//   Enneagram core desire / fear / passion (Riso & Hudson; Ichazo, Naranjo) · Zodiac sun sign.
 import { get, save } from '../db.js';
 import { esc, haptic } from '../util.js';
 import { icon } from '../icons.js';
@@ -11,8 +9,7 @@ import { sheet, toast } from '../ui.js';
 import {
   TRAITS, LEVEL, traitsOf, TEMPERAMENTS, VARIANTS, QUESTIONS, resolveKeirsey, keirseyOf,
   ENNEA, ENNEA_PARTS, enneaOf, enneaVerdict, ENNEA_TEST, resolveEnnea, enneaNeighbours,
-  DEFENSE_LEVELS, DEFENSE, BLUEPRINTS, BP_QUESTIONS, resolveBlueprint, ZODIAC, signFor, nearCusp,
-  TRAIT_RELATE, TEMP_RELATE, ENNEA_RELATE, DEFENSE_RELATE, FACETS, ENNEA_PROFILE, CENTERS,
+  ZODIAC, signFor, nearCusp, TRAIT_RELATE, TEMP_RELATE, ENNEA_RELATE, FACETS, ENNEA_PROFILE, CENTERS,
 } from './typology-data.js';
 
 const info = (summary, body) => `<details class="ty-info"><summary>${icon('info')}${summary}</summary><div>${body}</div></details>`;
@@ -23,15 +20,13 @@ const disclaimer = html => `<p class="ty-disclaimer">${icon('info')}<span>${html
 const relate = (name, rows) => rows.length ? `<div class="ty-relate"><div class="feel-label">How to relate to ${esc(name)}</div>
   ${rows.map(([l, d, n]) => `${l ? `<div class="ty-relate-for">${l}</div>` : ''}<div class="ty-do">${icon('check')}<span>${esc(d)}</span></div><div class="ty-dont">${icon('x')}<span>${esc(n)}</span></div>`).join('')}</div>` : '';
 
-const blueprintOf = p => p.blueprint || {};
 export const zodiacOf = p => ZODIAC.find(z => z[0] === p.zodiac) || signFor(p.fields?.birthday) || null;
 
 export function personalityTab(p) {
   const first = p.name.split(/\s+/)[0];
   const fc = p.facets || {};
-  const tr = traitsOf(p), kv = keirseyOf(p), en = enneaOf(p), bp = blueprintOf(p), er = p.erotic || {}, zs = zodiacOf(p);
-  const defs = (p.defenses || []).filter(k => DEFENSE.has(k)), dnotes = p.defenseNotes || {};
-  const filled = [Object.keys(tr).length === 5, !!kv, !!(en.desire || en.fear || en.passion), !!bp.primary, defs.length > 0, !!zs].filter(Boolean).length;
+  const tr = traitsOf(p), kv = keirseyOf(p), en = enneaOf(p), zs = zodiacOf(p);
+  const filled = [Object.keys(tr).length === 5, !!kv, !!(en.desire || en.fear || en.passion), !!zs].filter(Boolean).length;
 
   // Big Five
   const big5 = TRAITS.map(t => {
@@ -62,29 +57,6 @@ export function personalityTab(p) {
     ${ennN ? enneaProfileHTML(ennN, p.enneaWing) + relate(first, [['', ...ENNEA_RELATE[ennN]]]) : ''}
     ${en.desire || en.fear || en.passion ? '<div class="row-end"><button class="btn ghost sm" data-ty="ennea-test">Re-test</button></div>' : ''}`;
 
-  // Erotic Blueprints
-  const bpP = BLUEPRINTS[bp.primary], bpS = BLUEPRINTS[bp.secondary];
-  const blueprint = `${bpP ? `<div class="ty-result"><div class="ty-big">${bpP.name}${bpS ? ` <span class="faint">+ ${bpS.name}</span>` : ''}</div>
-        <p class="muted small">${esc(bpP.tag)}${bpS ? ` · then ${esc(bpS.tag.toLowerCase())}` : ''}</p>
-        <p>${esc(bpP.signs)}</p><p class="muted small"><b>Shadow side:</b> ${esc(bpP.shadow)}</p></div>
-        ${relate(first, [[bpS ? bpP.name : '', ...bpP.relate], ...(bpS ? [[bpS.name, ...bpS.relate]] : [])])}
-        <div class="row-end"><button class="btn ghost sm" data-ty="blueprint-clear">Clear</button><button class="btn ghost sm" data-ty="blueprint">Re-type</button></div>`
-      : `<p class="muted small">Five ways people are wired for pleasure. Answer 5 quick questions about what you’ve noticed, or pick directly.</p><button class="btn primary sm" data-ty="blueprint">Find their blueprint</button>`}
-    <label class="field"><span>What turns them on</span><textarea class="input" rows="2" data-erotic-note="accNotes" placeholder="e.g. being desired, banter, a certain place">${esc(er.accNotes || '')}</textarea></label>
-    <label class="field"><span>What turns them off</span><textarea class="input" rows="2" data-erotic-note="brakeNotes" placeholder="e.g. stress, feeling judged, distractions">${esc(er.brakeNotes || '')}</textarea></label>
-    ${info('The five blueprints', Object.values(BLUEPRINTS).map(b => `<p><b>${b.name}:</b> ${esc(b.tag.toLowerCase())}. ${esc(b.signs)}</p>`).join(''))}
-    ${disclaimer('The Erotic Blueprints come from sex educator <b>Jaiya</b>. They’re popular in coaching and handy for conversation, but it is a commercial framework that has <b>not been tested in peer-reviewed research</b>. This quiz is adapted for observing someone else; it isn’t Jaiya’s official quiz. The best-supported science of desire is the Dual Control Model (Bancroft &amp; Janssen): an accelerator and brakes that differ from person to person.')}`;
-
-  // Defences
-  const chosenByLevel = DEFENSE_LEVELS.map(l => [l, defs.filter(k => DEFENSE.get(k).level === l)]).filter(([, ks]) => ks.length);
-  const defenses = `${chosenByLevel.length ? chosenByLevel.map(([l, ks]) => `<div class="ty-def-level"><span class="ty-tone ${l.tone}">${esc(l.name)}</span>
-      ${ks.map(k => { const d = DEFENSE.get(k); return `<div class="ty-def"><b>${esc(d.name)}</b><span class="muted small">${esc(d.def)}</span>
-        <textarea class="input" rows="2" data-def-note="${k}" aria-label="How ${esc(first)} acts out ${esc(d.name)}" placeholder="How do they act it out? e.g. ${esc(d.ex)}">${esc(dnotes[k] || '')}</textarea></div>`; }).join('')}</div>`).join('')
-      : '<p class="muted small">Which defences do they reach for when they feel threatened, hurt or ashamed?</p>'}
-    ${defs.length ? `<p class="ty-verdict">${defenseVerdict(chosenByLevel)}</p>` : ''}
-    ${relate(first, chosenByLevel.map(([l]) => [chosenByLevel.length > 1 ? l.name : '', ...DEFENSE_RELATE[l.id]]))}
-    <button class="btn ${defs.length ? 'ghost' : 'primary'} sm" data-ty="defenses">${defs.length ? 'Add or remove' : 'Choose defences'}</button>`;
-
   // Zodiac
   const fromBday = !p.zodiac && zs;
   const zodiac = zs ? `<div class="ty-result"><div class="ty-big">${zs[2]} ${zs[1]}</div>
@@ -92,22 +64,18 @@ export function personalityTab(p) {
       <p>${esc(zs[6])}</p>${fromBday && nearCusp(p.fields.birthday) ? '<p class="muted small">Born on a cusp: depending on the year they may be the neighbouring sign. Tap Change to set it.</p>' : ''}</div>
       ${relate(first, [['', zs[7], zs[8]]])}
       <div class="row-end">${p.zodiac ? '<button class="btn ghost sm" data-ty="zodiac-clear">Use birthday</button>' : ''}<button class="btn ghost sm" data-ty="zodiac">Change</button></div>`
-    : `<p class="muted small">Add their birthday in Profile and the sign fills in by itself, or pick it.</p><button class="btn primary sm" data-ty="zodiac">Pick sign</button>`;
+    : `<p class="muted small">Pick their sign; each one shows its birthday dates.</p><button class="btn primary sm" data-ty="zodiac">Pick sign</button>`;
 
   return `
-    <p class="muted small pad-x ty-intro">Your read of ${esc(first)}, ${filled}/6 lenses filled. Tap <b>ⓘ</b> to learn what to look for. These are impressions to refine over time, not diagnoses.</p>
+    <p class="muted small pad-x ty-intro">Your read of ${esc(first)}, ${filled}/4 lenses filled. Tap <b>ⓘ</b> to learn what to look for. These are impressions to refine over time, not diagnoses.</p>
     ${card('Big Five traits', Object.keys(tr).length ? `${Object.keys(tr).length}/5` : '', big5 + b5relate + info('About the Big Five', '<p>The most researched model of personality (Costa &amp; McCrae). Each trait is a spectrum; most people sit near the middle. Each also splits into six <b>facets</b> (the NEO PI-R’s 30), which show where within a trait someone stands out: two people with the same Extraversion can differ a lot in Warmth versus Excitement seeking. Ratings by people who know someone well are valid and add to what they would say about themselves (Vazire, 2010).</p>'))}
     ${card('Temperament', 'Please Understand Me II', keirsey + info('About Keirsey’s temperaments', '<p>David Keirsey sorts people by two things you can observe: what they talk about (<b>concrete</b> vs <b>abstract</b>) and how they pursue goals (<b>cooperative</b> vs <b>utilitarian</b>). That gives four temperaments: Artisan, Guardian, Idealist and Rational. Each splits into two roles and four of the 16 types (e.g. Champion = ENFP).</p><p class="muted">Popular and practical, but with weaker scientific support than the Big Five. Treat it as a lens.</p>'))}
     ${card('Enneagram core', '', ennea + info('About the Enneagram core', '<p>Each of the nine types is driven by a <b>core desire</b>, defended against a <b>core fear</b> (Riso &amp; Hudson), and has a <b>passion</b>, the “sin” or emotional habit that takes over (Ichazo, Naranjo). Picking them separately lets you notice when someone does not fit one type neatly.</p><p>The quick test crosses two groupings Riso &amp; Hudson use in their QUEST sorter: how someone goes after what they want, and how they react when things go wrong. Each pair points to one type.</p><p class="muted">A reflection tool with little scientific validation.</p>'))}
-    ${card('Erotic blueprint', bpP ? '' : 'Jaiya', blueprint)}
-    ${card('Defence mechanisms', defs.length ? String(defs.length) : '', defenses + info('About defence mechanisms', '<p>Defences are automatic ways the mind protects itself from anxiety, shame or pain. The DSM-IV <b>Defensive Functioning Scale</b>, built on George Vaillant’s work, ranks them from <b>high adaptive</b> (healthy, like humour and sublimation) down to <b>action-level</b> defences (like acting out). Everyone uses several; what matters is which ones dominate under stress.</p>'))}
     ${card('Zodiac', '', zodiac + disclaimer('Astrology has <b>no scientific support</b>. In a double-blind test, astrologers could not match birth charts to personality profiles better than chance (Carlson, <i>Nature</i>, 1985), and large studies find no link between sun sign and personality. Use it as a fun conversation lens, and because it matters to people who believe in it.'))}
     <details class="card pad why"><summary><b>Sources</b></summary>
       <p>Costa, P. &amp; McCrae, R. (1992). <i>NEO PI-R Professional Manual.</i> · Vazire, S. (2010). Who knows what about a person? <i>J. Personality &amp; Social Psychology.</i></p>
       <p>Keirsey, D. (1998). <i>Please Understand Me II.</i></p>
       <p>The Enneagram Institute, type descriptions (enneagraminstitute.com). · Riso, D. &amp; Hudson, R. (1996). <i>Personality Types</i> (rev. ed.). · Riso, D. &amp; Hudson, R. (1999). <i>The Wisdom of the Enneagram</i> (includes the QUEST). · Naranjo, C. (1994). <i>Character and Neurosis.</i> · Palmer, H. (1988). <i>The Enneagram.</i></p>
-      <p>Jaiya. <i>Erotic Blueprints</i> (eroticblueprints.com). · Bancroft, J. &amp; Janssen, E. (2000). The dual control model of male sexual response. · Nagoski, E. (2015). <i>Come As You Are.</i></p>
-      <p>Vaillant, G. (1992). <i>Ego Mechanisms of Defense.</i> · American Psychiatric Association (1994). <i>DSM-IV</i>, Defensive Functioning Scale.</p>
       <p>Carlson, S. (1985). A double-blind test of astrology. <i>Nature</i> 318.</p>
     </details>`;
 }
@@ -160,18 +128,9 @@ function enneaLead(e) {
   return top > 1 || picks.length === 1 ? [...counts].find(([, c]) => c === top)[0] : e.fear || null;
 }
 
-function defenseVerdict(chosenByLevel) {
-  const order = DEFENSE_LEVELS.map(l => l.id);
-  const levels = chosenByLevel.map(([l]) => l).sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
-  const best = levels[0], worst = levels.at(-1);
-  if (best === worst) return best.id === 'adaptive' ? 'Mostly healthy, mature defences.' : `Mostly ${best.name.toLowerCase()} defences. Gentle honesty and patience help most here.`;
-  return `At best: ${best.name.toLowerCase()}. Under pressure they can drop to ${worst.name.toLowerCase()}.`;
-}
-
 // ---------- interaction ----------
 // Returns true when the click was handled. `redraw` re-renders the person page.
 export function handlePersonality(e, id, redraw) {
-  if (e.target.closest('[data-trait], [data-facet], [data-ty]')) flushPersonality(); // so a redraw never shows a stale note
   const p = () => get('people', id);
   const put = patch => save('people', { ...p(), ...patch, updated: Date.now() }, { silent: true });
   const undoable = (msg, patch) => { const prev = Object.fromEntries(Object.keys(patch).map(k => [k, p()[k]])); put(patch); redraw(); toast(msg, { action: 'Undo', onAction: () => { put(prev); redraw(); } }); };
@@ -189,34 +148,9 @@ export function handlePersonality(e, id, redraw) {
   if (act === 'ennea') enneaSheet(p(), b.dataset.part, n => { put({ enneagram: { ...enneaOf(p()), [b.dataset.part]: n } }); redraw(); });
   if (act === 'ennea-wing') { const w = +b.dataset.wing; put({ enneaWing: p().enneaWing === w ? null : w }); redraw(); }
   if (act === 'ennea-test') enneaTestSheet(p(), n => { put({ enneagram: { desire: n, fear: n, passion: n } }); redraw(); });
-  if (act === 'blueprint') blueprintSheet(p(), bp => { put({ blueprint: bp }); redraw(); });
-  if (act === 'blueprint-clear') undoable('Cleared', { blueprint: null });
-  if (act === 'defenses') defenseSheet(p(), keys => { put({ defenses: keys }); redraw(); });
   if (act === 'zodiac') zodiacSheet(p(), k => { put({ zodiac: k }); redraw(); });
   if (act === 'zodiac-clear') undoable('Using their birthday', { zodiac: null });
   return true;
-}
-
-// Free-text notes save shortly after typing stops. One timer per note, so typing in
-// two notes in quick succession never drops the first.
-const pending = new Map();
-const writeNote = (id, group, k, v) => { const p = get('people', id); if (p) save('people', { ...p, [group]: { ...(p[group] || {}), [k]: v }, updated: Date.now() }, { silent: true }); };
-function queueNote(id, group, k, v) {
-  const key = `${id}|${group}|${k}`;
-  clearTimeout(pending.get(key)?.t);
-  pending.set(key, { t: setTimeout(() => { pending.delete(key); writeNote(id, group, k, v); }, 400), run: () => writeNote(id, group, k, v) });
-}
-export function handlePersonalityInput(e, id) {
-  const t = e.target.closest('[data-erotic-note]');
-  if (t) { queueNote(id, 'erotic', t.dataset.eroticNote, t.value); return true; }
-  const d = e.target.closest('[data-def-note]');
-  if (d) { queueNote(id, 'defenseNotes', d.dataset.defNote, d.value); return true; }
-  return false;
-}
-// save anything still waiting (when leaving the page)
-export function flushPersonality() {
-  pending.forEach(({ t, run }) => { clearTimeout(t); run(); });
-  pending.clear();
 }
 
 const firstName = p => p.name.split(/\s+/)[0];
@@ -316,69 +250,6 @@ function enneaSheet(p, part, done) {
   });
 }
 
-function blueprintSheet(p, done) {
-  const ans = [];
-  let step = 0, pick = { ...(p.blueprint || {}) };
-  sheet({
-    title: `${firstName(p)}’s erotic blueprint`,
-    render(body, close) {
-      const option = (k, sel, attr) => { const b = BLUEPRINTS[k]; return `<button class="ty-option compact ${sel ? 'sel' : ''}" ${attr}="${k}"><b>${b.name}</b><span>${esc(b.tag)}</span></button>`; };
-      const draw = () => {
-        if (step === 'direct') {
-          body.innerHTML = `<div class="feel-label">Main blueprint</div>${Object.keys(BLUEPRINTS).map(k => option(k, pick.primary === k, 'data-primary')).join('')}
-            <div class="feel-label">Second <em class="faint">optional</em></div><div class="ty-grid">${Object.keys(BLUEPRINTS).filter(k => k !== pick.primary).map(k => option(k, pick.secondary === k, 'data-secondary')).join('')}</div>
-            <div class="feel-save row-end"><button class="btn ghost" data-redo>Back to quiz</button><button class="btn primary" data-save ${pick.primary ? '' : 'disabled'}>Save</button></div>`;
-          return;
-        }
-        if (step >= BP_QUESTIONS.length) {
-          pick = resolveBlueprint(ans);
-          const a = BLUEPRINTS[pick.primary], b = BLUEPRINTS[pick.secondary];
-          body.innerHTML = `<div class="ty-result center"><p class="muted small">From your answers</p><div class="ty-big">${a.name}${b ? ` <span class="faint">+ ${b.name}</span>` : ''}</div><p>${esc(a.signs)}</p></div>
-            <div class="row-end"><button class="btn ghost" data-direct>Adjust</button><button class="btn primary" data-save>Save</button></div>`;
-          return;
-        }
-        const q = BP_QUESTIONS[step];
-        body.innerHTML = `${steps(BP_QUESTIONS.length, step)}<h3 class="ty-q">${esc(q.q)}</h3><p class="muted small">Go with what you’ve seen or been told. Skip a question if you don’t know.</p>
-          ${q.opts.map(([k, l]) => `<button class="ty-option compact" data-answer="${k}"><span>${esc(l)}</span></button>`).join('')}
-          <div class="row-between">${step ? '<button class="btn ghost sm" data-back>Back</button>' : '<button class="link small" data-direct>I already know</button>'}<button class="link small" data-skip>Don’t know</button></div>`;
-      };
-      draw();
-      body.addEventListener('click', e => {
-        const a = e.target.closest('[data-answer]');
-        if (a) { ans[step] = a.dataset.answer; step++; haptic(5); draw(); return; }
-        if (e.target.closest('[data-skip]')) { ans[step] = null; step++; draw(); return; }
-        if (e.target.closest('[data-back]')) { step = Math.max(0, step - 1); draw(); return; }
-        if (e.target.closest('[data-direct]')) { step = 'direct'; draw(); return; }
-        if (e.target.closest('[data-redo]')) { step = 0; ans.length = 0; draw(); return; }
-        const pr = e.target.closest('[data-primary]');
-        if (pr) { pick = { primary: pr.dataset.primary, secondary: pick.secondary === pr.dataset.primary ? null : pick.secondary }; draw(); return; }
-        const se = e.target.closest('[data-secondary]');
-        if (se) { pick.secondary = pick.secondary === se.dataset.secondary ? null : se.dataset.secondary; draw(); return; }
-        if (e.target.closest('[data-save]') && pick.primary) {
-          if (step !== 'direct' && !ans.some(Boolean)) { toast('Answer at least one question, or pick directly'); return; }
-          done(pick); close(); toast(`Saved: ${BLUEPRINTS[pick.primary].name}`);
-        }
-      });
-    },
-  });
-}
-
-function defenseSheet(p, done) {
-  const picked = new Set((p.defenses || []).filter(k => DEFENSE.has(k)));
-  sheet({
-    title: 'Defence mechanisms',
-    render(body, close) {
-      body.innerHTML = `<p class="muted small">Pick the ones you have actually seen, usually 2–5. Ordered from healthiest to least adaptive. After saving, you can write how each one shows up.</p>
-        ${DEFENSE_LEVELS.map(l => `<div class="feel-label"><span class="ty-tone ${l.tone}">${esc(l.name)}</span></div>
-          ${l.items.map(([k, n, d, ex]) => `<label class="ty-check"><input type="checkbox" value="${k}" ${picked.has(k) ? 'checked' : ''}><span><b>${esc(n)}</b><span>${esc(d)}</span><span class="faint small">e.g. ${esc(ex)}</span></span></label>`).join('')}`).join('')}
-        <div class="feel-save row-end"><button class="btn ghost" data-cancel>Cancel</button><button class="btn primary" data-save>Save</button></div>`;
-      body.addEventListener('change', e => { if (e.target.matches('input[type=checkbox]')) e.target.checked ? picked.add(e.target.value) : picked.delete(e.target.value); });
-      body.querySelector('[data-cancel]').onclick = () => close();
-      body.querySelector('[data-save]').onclick = () => { done([...picked]); close(); };
-    },
-  });
-}
-
 function zodiacSheet(p, done) {
   const cur = zodiacOf(p)?.[0];
   sheet({
@@ -411,10 +282,6 @@ export function personalityText(p) {
       ...ENNEA_PARTS.filter(([k]) => en[k]).map(([k, l, i]) => `- ${l}: ${ENNEA[en[k] - 1][i]} (type ${en[k]})`),
       ...(t ? [`- Under stress → type ${t.stress[0]}: ${t.stress[1]}`, `- In growth → type ${t.growth[0]}: ${t.growth[1]}`] : []), '');
   }
-  const bp = blueprintOf(p), er = p.erotic || {};
-  if (bp.primary || er.accNotes || er.brakeNotes) out.push('## Erotic blueprint', ...(bp.primary ? [`- ${BLUEPRINTS[bp.primary].name}${bp.secondary ? ` + ${BLUEPRINTS[bp.secondary].name}` : ''}`] : []), ...(er.accNotes ? [`- Turned on by: ${er.accNotes}`] : []), ...(er.brakeNotes ? [`- Turned off by: ${er.brakeNotes}`] : []), '');
-  const defs = (p.defenses || []).filter(k => DEFENSE.has(k));
-  if (defs.length) out.push('## Defence mechanisms', ...defs.map(k => `- ${DEFENSE.get(k).name} (${DEFENSE.get(k).level.name})${p.defenseNotes?.[k] ? `: ${p.defenseNotes[k]}` : ''}`), '');
   const zs = zodiacOf(p);
   if (zs) out.push('## Zodiac', `${zs[2]} ${zs[1]} (${zs[4]}, ${zs[5]})`, '');
   return out;
