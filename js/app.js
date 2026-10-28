@@ -31,7 +31,7 @@ function renderShell() {
   $('#sidebar').innerHTML = `
     <div class="brand"><span class="brand-mark"></span><span>Almanac</span></div>
     <button class="side-search" data-open-search>${icon('search')}<span>Search</span><kbd>/</kbd></button>
-    ${NAV.map(([k, l, ic, href]) => `<a class="side-link" data-nav="${k}" href="${href}">${icon(ic)}<span>${l}</span></a>`).join('')}
+    ${NAV.filter(([k]) => k !== 'feel' || settings().showFeelings).map(([k, l, ic, href]) => `<a class="side-link" data-nav="${k}" href="${href}">${icon(ic)}<span>${l}</span></a>`).join('')}
     <div class="side-tags"></div>
     <div class="side-foot"><a class="side-link" data-nav="settings" href="#/settings">${icon('settings')}<span>Settings</span></a><div class="app-version">Version ${APP_VERSION}</div></div>`;
   $('#tabbar').innerHTML = TABS.map(k => { const [, l, ic, href] = NAV.find(n => n[0] === k); return `<a class="tab" data-nav="${k}" href="${href}">${icon(ic)}<span>${l}</span></a>`; }).join('');
@@ -90,7 +90,7 @@ function openSearch() {
             .forEach(o => res.push({ k: 'One thing', href: `#/onething`, html: `${icon('target')}<div class="grow">${highlight(o.text, q)}<div class="muted small">${fmtDay(o.id)}${o.done ? ' · done' : ''}</div></div>` }));
           const tmap = new Map(list('trackers').map(t => [t.id, t]));
           list('trackers').filter(t => t.name.toLowerCase().includes(q)).forEach(t => res.push({ k: 'Tracker', href: '#/calendar', html: `<span class="ev-badge" style="--c:${t.color}">${esc(t.emoji)}</span><div class="grow">${highlight(t.name, q)}</div>` }));
-          moods().filter(m => (m.words.join(' ') + ' ' + (m.note || '')).toLowerCase().includes(q)).reverse().slice(0, 4)
+          if (settings().showFeelings) moods().filter(m => (m.words.join(' ') + ' ' + (m.note || '')).toLowerCase().includes(q)).reverse().slice(0, 4)
             .forEach(m => res.push({ k: 'Feeling', href: '#/feel', html: `${icon('heart')}<div class="grow">${highlight(m.words.join(', '), q)}<div class="muted small">${fmtDay(m.date)}${m.note ? ' · ' + highlight(snippet(m.note, q, 60), q) : ''}</div></div>` }));
           list('events').filter(e => e.note && e.note.toLowerCase().includes(q)).slice(0, 4)
             .forEach(e => res.push({ k: 'Log', href: `#/calendar?day=${e.date}`, html: `${icon('calendar')}<div class="grow">${highlight(e.note, q)}<div class="muted small">${esc(tmap.get(e.trackerId)?.name || '')} · ${fmtDay(e.date)}</div></div>` }));
@@ -125,7 +125,7 @@ function onKey(e) {
   if (e.key === '/') { e.preventDefault(); openSearch(); return; }
   if (gPending) {
     gPending = false;
-    const map = { t: 'today', n: 'notes', o: 'onething', c: 'calendar', p: 'people', h: 'habits', f: 'feel', s: 'settings' };
+    const map = { t: 'today', n: 'notes', o: 'onething', c: 'calendar', p: 'people', h: 'habits', s: 'settings', ...(settings().showFeelings ? { f: 'feel' } : {}) };
     if (map[e.key]) navigate('#/' + map[e.key]);
     return;
   }
@@ -179,7 +179,7 @@ async function boot() {
   route('/people', renderPeople, { name: 'people' });
   route('/people/:id', renderPeople, { name: 'person' });
   route('/settings', renderSettings, { name: 'settings' });
-  route('/feel', renderFeelings, { name: 'feel' });
+  route('/feel', (main, params, query) => settings().showFeelings ? renderFeelings(main, params, query) : navigate('#/today', { replace: true }), { name: 'feel' });
 
   document.addEventListener('routechange', () => {
     updateNav();
@@ -192,6 +192,7 @@ async function boot() {
   document.addEventListener('lock-now', () => showLock());
   document.addEventListener('install-available', () => { if (['today', 'settings'].includes(currentRoute()?.r.name)) rerender(); });
   subscribe(store => { if (store === '*') { applyTheme(); rerender(); } });
+  document.addEventListener('features-changed', () => { renderShell(); updateNav(); });
 
   // When the date rolls over while the app is open (or resumes the next day), refresh
   let day = today();

@@ -89,6 +89,7 @@ const DEFAULT_SETTINGS = {
   customPersonFields: [],
   noteTemplates: [],
   dailyTemplate: 'daily',
+  showFeelings: false, // the Feelings (mood) tracker is hidden unless turned on in Settings
   lockHash: null,
   noteSort: 'updated',
   noteGroup: 'date',

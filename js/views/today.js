@@ -54,7 +54,7 @@ export function renderToday(main) {
     <div class="today-grid">
       <div class="col">
         ${oneThingCard(t, { big: true, link: true })}
-        ${feelingsCard()}
+        ${st.showFeelings ? feelingsCard() : ''}
         ${habitsCard(t)}
       </div>
       <div class="col">

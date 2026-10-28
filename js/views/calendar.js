@@ -174,7 +174,7 @@ function dayPanel(day) {
   const dn = new Set(logFor(day).done);
   const showOne = day <= addDays(today(), 7) && (getOne(day) || day >= today());
   const showHabits = hs.length && day <= today();
-  const feel = feelingsLine(day);
+  const feel = settings().showFeelings && feelingsLine(day);
   const also = [
     ...bdays.map(p => `<a class="day-line" href="#/people/${p.id}">${icon('cake')}<span><b>${esc(p.name)}</b>'s birthday</span>${icon('chevR', 'day-chev')}</a>`),
     ...met.map(({ p, i }) => `<a class="day-line" href="#/people/${p.id}">${icon('chat')}<span>Saw <b>${esc(p.name)}</b>${i.note ? ' — ' + esc(i.note.slice(0, 60)) : ''}</span>${icon('chevR', 'day-chev')}</a>`),

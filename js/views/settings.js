@@ -29,6 +29,11 @@ export function renderSettings(main) {
         <div class="list-row"><span class="grow">Accent</span><div class="swatches">${ACCENTS.map(c => `<button class="swatch ${st.accent === c ? 'sel' : ''}" data-accent="${c}" style="background:${c}" aria-label="Accent ${c}"></button>`).join('')}</div></div>
       </div></section>
 
+    <section class="section"><h3 class="group-label">Features</h3>
+      <div class="card list-card">
+        <label class="list-row"><span class="grow">Feelings<div class="muted small">Mood check-ins, the mood map and patterns. Turning it off hides it everywhere; past check-ins are kept.</div></span><input type="checkbox" class="switch" data-feature="showFeelings" ${st.showFeelings ? 'checked' : ''}></label>
+      </div></section>
+
     <section class="section"><h3 class="group-label">Privacy</h3>
       <div class="card list-card">
         <div class="list-row"><span class="grow">Passcode lock<div class="muted small">Asks for a passcode when the app opens. It hides the app from casual eyes; data on this device is not encrypted.</div></span>
@@ -51,9 +56,9 @@ export function renderSettings(main) {
     <section class="section"><h3 class="group-label">Shortcuts</h3>
       <div class="card pad shortcuts">
         <div><kbd>/</kbd> or <kbd>⌘K</kbd> Search everything</div><div><kbd>N</kbd> New note</div>
-        <div><kbd>G</kbd> then <kbd>T</kbd>/<kbd>N</kbd>/<kbd>O</kbd>/<kbd>C</kbd>/<kbd>P</kbd>/<kbd>H</kbd>/<kbd>F</kbd> Go to Today, Notes, One Thing, Calendar, People, Habits, Feelings</div>
+        <div><kbd>G</kbd> then <kbd>T</kbd>/<kbd>N</kbd>/<kbd>O</kbd>/<kbd>C</kbd>/<kbd>P</kbd>/<kbd>H</kbd>${st.showFeelings ? '/<kbd>F</kbd>' : ''} Go to Today, Notes, One Thing, Calendar, People, Habits${st.showFeelings ? ', Feelings' : ''}</div>
         <div>In notes: <kbd>[ ]</kbd> checklist · <kbd>-</kbd> bullet · <kbd>1.</kbd> numbered · <kbd>&gt;</kbd> quote · <kbd>#</kbd> heading · <kbd>\`\`\`</kbd> code · <kbd>---</kbd> divider, each followed by a space</div>
-        <div><kbd>⌘B</kbd> <kbd>⌘I</kbd> <kbd>⌘U</kbd> <kbd>⌘K</kbd> link · <kbd>⌘⇧C</kbd> checklist · <kbd>Tab</kbd> indent list</div>
+        <div><kbd>⌘B</kbd> <kbd>⌘I</kbd> <kbd>⌘U</kbd> <kbd>⌘K</kbd> link · <kbd>⌘⇧C</kbd> checklist · <kbd>Tab</kbd> / <kbd>⇧Tab</kbd> nest or un-nest a list item · <kbd>D</kbd> today’s note</div>
       </div></section>
     <p class="app-version">Almanac · Version ${APP_VERSION}</p>
   </div>`;
@@ -67,6 +72,8 @@ export function renderSettings(main) {
   bindInstall(page, rerender);
 
   page.addEventListener('change', async e => {
+    const f = e.target.dataset.feature;
+    if (f) { setSettings({ [f]: e.target.checked }); document.dispatchEvent(new CustomEvent('features-changed')); toast(e.target.checked ? 'Feelings is back' : 'Feelings hidden'); return; }
     const k = e.target.dataset.set;
     if (k) { setSettings({ [k]: k === 'weekStart' ? +e.target.value : e.target.value.trim() }); toast('Saved'); }
     if (e.target.matches('[data-import]') && e.target.files[0]) {
