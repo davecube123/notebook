@@ -644,19 +644,13 @@ body.in-editor #toast { bottom: 80px; }
 .nudges { display: flex; gap: 8px; overflow-x: auto; margin: 4px -16px 6px; padding: 0 16px 4px; scrollbar-width: none; }
 .nudge { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 8px; border-radius: 999px; background: var(--surface); font-size: 14px; }
 .person-page { max-width: 720px; }
-.person-hero { text-align: center; padding: 4px 0 8px; }
-.avatar-edit { position: relative; display: inline-block; cursor: pointer; margin-bottom: 10px; }
+.avatar-edit { position: relative; display: inline-block; cursor: pointer; }
 .avatar-cam { position: absolute; right: 0; bottom: 0; width: 30px; height: 30px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 4px rgba(0,0,0,.15); display: grid; place-items: center; color: var(--accent); }
 .avatar-cam .ic { width: 16px; height: 16px; }
 .person-title { display: block; width: 100%; text-align: center; border: 0; outline: 0; background: transparent; font: 600 28px/1.2 var(--font); letter-spacing: -.025em; color: var(--ink); padding: 2px 0; }
 .person-summary { display: block; width: 100%; text-align: center; border: 0; outline: 0; background: transparent; font-size: 15px; color: var(--muted); padding: 2px 0 10px; }
 .person-summary::placeholder { color: var(--faint); }
 .person-title:focus, .person-summary:focus { background: var(--surface); border-radius: 10px; }
-.person-facts { display: flex; justify-content: center; gap: 0; margin-top: 16px; background: var(--surface); border-radius: var(--radius); }
-.person-facts > div { flex: 1; padding: 12px 6px; border-left: .5px solid var(--line); display: flex; flex-direction: column; }
-.person-facts > div:first-child { border-left: 0; }
-.person-facts b { font-size: 15px; font-weight: 600; }
-.person-facts span { font-size: 12px; color: var(--muted); }
 .seg { display: flex; gap: 2px; padding: 2px; border-radius: 9px; background: var(--fill); margin: 18px 0 16px; position: sticky; top: 6px; z-index: 5; backdrop-filter: saturate(1.8) blur(20px); -webkit-backdrop-filter: saturate(1.8) blur(20px); }
 .seg > a, .seg > button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; height: 30px; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--ink); }
 .seg .ic { display: none; }
@@ -1038,3 +1032,53 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .mo-more[open] summary::after { transform: rotate(90deg); }
 .mo-grid.mini { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; margin-top: 8px; }
 .mo-pick.mini { height: 50px; }
+
+/* Personality dashboard */
+.ty-dash { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.ty-dash-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.ty-dash-head h3 { margin: 0; font-size: 16px; font-weight: 700; }
+.ty-row5 { display: grid; grid-template-columns: 136px minmax(0, 1fr) 72px; align-items: center; gap: 10px; min-height: 32px; width: 100%; text-align: left; color: var(--ink); border-radius: 8px; }
+.ty-row5-name { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ty-meter { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 3px; }
+.ty-meter i { height: 8px; border-radius: 4px; background: var(--fill); }
+.ty-meter i.on { background: var(--accent); }
+.ty-row5-lvl { font-size: 13px; color: var(--muted); text-align: right; }
+.ty-row5-lvl.rate { color: var(--accent); font-weight: 600; }
+.ty-dash-foot { border-top: .5px solid var(--line); margin-top: 6px; padding-top: 8px; }
+.ty-tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.ty-tile { display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 12px 10px; border-radius: var(--radius); background: var(--surface); text-align: left; color: var(--ink); }
+.ty-tile-label { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); }
+.ty-tile-big { font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ty-tile.empty .ty-tile-big { color: var(--accent); font-size: 15px; }
+.ty-tile-sub { font-size: 12px; color: var(--muted); line-height: 1.3; }
+.ty-tips { display: flex; flex-direction: column; gap: 8px; }
+.ty-tips.no { margin-top: 8px; padding-top: 8px; border-top: .5px solid var(--line); }
+.ty-tip { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: start; font-size: 15px; line-height: 1.35; }
+.ty-tip .ic { width: 16px; height: 16px; margin-top: 2px; stroke-width: 2.6; }
+.ty-tips.ok .ic { color: var(--q-green); }
+.ty-tips.no .ic { color: var(--q-red); }
+.ty-tip em { font-style: normal; font-size: 11px; color: var(--muted); background: var(--fill-2); border-radius: 6px; padding: 1px 6px; margin-top: 2px; white-space: nowrap; }
+.ty-sheet .sheet-body { display: flex; flex-direction: column; gap: 14px; }
+.ty-sheet-sec h3 { margin: 6px 0 8px; font-size: 17px; }
+.ty-look { font-size: 14.5px; line-height: 1.45; color: var(--ink-2); background: var(--fill-2); border-radius: 10px; padding: 10px 12px; }
+.ty-look p { margin: 0 0 6px; } .ty-look p:last-child { margin: 0; }
+.ty-all { align-self: flex-start; }
+
+/* compact person header: photo beside the name, one line of facts */
+.person-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 4px 14px; padding: 0 0 12px; }
+.person-hero .avatar.xl { width: 64px; height: 64px; font-size: 24px; }
+.person-hero .avatar-cam { width: 24px; height: 24px; right: -2px; bottom: -2px; }
+.person-hero .avatar-cam .ic { width: 13px; height: 13px; }
+.ph-text { min-width: 0; }
+.person-hero .person-title { text-align: left; font-size: 24px; padding: 2px 6px; margin-left: -6px; width: calc(100% + 6px); }
+.person-hero .person-summary { text-align: left; padding: 2px 6px; margin-left: -6px; width: calc(100% + 6px); }
+.ph-meta { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; }
+.ph-meta .chip-row { padding: 6px 0 0; margin: 0; }
+.person-facts { margin: 0; font-size: 13px; color: var(--muted); }
+.person-hero .banner { grid-column: 1 / -1; margin: 6px 0 0; }
+.person-page .seg { margin: 6px 0 12px; }
+.person-hero { padding-bottom: 4px; }
+.ty-row5 { min-height: 29px; }
+.ty-dash-head { margin-bottom: 2px; }
+.ty-dash { margin-bottom: 10px; }
+.ty-tiles { margin-bottom: 10px; }

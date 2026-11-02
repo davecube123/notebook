@@ -22,56 +22,135 @@ const relate = (name, rows) => rows.length ? `<div class="ty-relate"><div class=
 
 export const zodiacOf = p => ZODIAC.find(z => z[0] === p.zodiac) || signFor(p.fields?.birthday) || null;
 
-export function personalityTab(p) {
-  const first = p.name.split(/\s+/)[0];
-  const fc = p.facets || {};
-  const tr = traitsOf(p), kv = keirseyOf(p), en = enneaOf(p), zs = zodiacOf(p);
-  const filled = [Object.keys(tr).length === 5, !!kv, !!(en.desire || en.fear || en.passion), !!zs].filter(Boolean).length;
+// ---------- the pieces (shown in the detail sheets) ----------
+const ABOUT = {
+  big5: info('About the Big Five', '<p>The most researched model of personality (Costa &amp; McCrae). Each trait is a spectrum; most people sit near the middle. Each also splits into six <b>facets</b> (the NEO PI-R’s 30), which show where within a trait someone stands out: two people with the same Extraversion can differ a lot in Warmth versus Excitement seeking. Ratings by people who know someone well are valid and add to what they would say about themselves (Vazire, 2010).</p>'),
+  temp: info('About Keirsey’s temperaments', '<p>David Keirsey sorts people by two things you can observe: what they talk about (<b>concrete</b> vs <b>abstract</b>) and how they pursue goals (<b>cooperative</b> vs <b>utilitarian</b>). That gives four temperaments: Artisan, Guardian, Idealist and Rational. Each splits into two roles and four of the 16 types (e.g. Champion = ENFP).</p><p class="muted">Popular and practical, but with weaker scientific support than the Big Five. Treat it as a lens.</p>'),
+  ennea: info('About the Enneagram core', '<p>Each of the nine types is driven by a <b>core desire</b>, defended against a <b>core fear</b> (Riso &amp; Hudson), and has a <b>passion</b>, the “sin” or emotional habit that takes over (Ichazo, Naranjo). Picking them separately lets you notice when someone does not fit one type neatly.</p><p>The quick test crosses two groupings Riso &amp; Hudson use in their QUEST sorter: how someone goes after what they want, and how they react when things go wrong. Each pair points to one type.</p><p class="muted">A reflection tool with little scientific validation.</p>'),
+  zodiac: disclaimer('Astrology has <b>no scientific support</b>. In a double-blind test, astrologers could not match birth charts to personality profiles better than chance (Carlson, <i>Nature</i>, 1985), and large studies find no link between sun sign and personality. Use it as a fun conversation lens, and because it matters to people who believe in it.'),
+};
 
-  // Big Five
-  const big5 = TRAITS.map(t => {
-    const v = tr[t.k];
-    const desc = !v ? '<span class="faint">Not rated</span>' : v <= 2 ? `<b>${LEVEL[v]}:</b> ${t.low}` : v >= 4 ? `<b>${LEVEL[v]}:</b> ${t.high}` : '<b>Average:</b> a mix of both, depending on the situation';
-    return `<div class="ty-trait"><div class="ty-trait-head"><b>${t.name}</b>${t.alt ? `<span class="faint small">${t.alt}</span>` : ''}</div>
-      ${scale5('data-trait', t.k, v, t.name)}<div class="ty-desc small">${desc}</div>
-      ${info('What to look for', `<p>${esc(t.what)}</p><p><b>High:</b> ${esc(t.high)}.<br><b>Low:</b> ${esc(t.low)}.</p><p class="muted">${esc(t.look)}</p>`)}
-      ${facetsHTML(t, fc, v)}</div>`;
-  }).join('');
-  const b5relate = relate(first, TRAITS.filter(t => tr[t.k] && tr[t.k] !== 3).map(t => [`${tr[t.k] > 3 ? 'High' : 'Low'} ${t.name.toLowerCase()}`, ...TRAIT_RELATE[t.k][tr[t.k] > 3 ? 'hi' : 'lo']]));
+function traitHTML(p, t) {
+  const v = traitsOf(p)[t.k];
+  const desc = !v ? '<span class="faint">Not rated</span>' : v <= 2 ? `<b>${LEVEL[v]}:</b> ${t.low}` : v >= 4 ? `<b>${LEVEL[v]}:</b> ${t.high}` : '<b>Average:</b> a mix of both, depending on the situation';
+  return `<div class="ty-trait">${scale5('data-trait', t.k, v, t.name)}<div class="ty-desc small">${desc}</div>
+    <div class="ty-look"><p>${esc(t.what)}</p><p><b>High:</b> ${esc(t.high)}.<br><b>Low:</b> ${esc(t.low)}.</p><p class="muted">${esc(t.look)}</p></div>
+    ${facetsHTML(t, p.facets || {}, v)}</div>`;
+}
 
-  // Temperament
-  const temp = kv && TEMPERAMENTS[kv[1]];
-  const keirsey = kv ? `<div class="ty-result"><div class="ty-big">${esc(kv[3])} <span class="faint">${kv[0]}</span></div>
+function keirseyHTML(p) {
+  const kv = keirseyOf(p), first = firstName(p);
+  if (!kv) return `<p class="muted small">Answer 4 questions about how they talk and act, and the type is worked out for you.</p><button class="btn primary sm" data-ty="keirsey">Find their type</button>`;
+  const temp = TEMPERAMENTS[kv[1]];
+  return `<div class="ty-result"><div class="ty-big">${esc(kv[3])} <span class="faint">${kv[0]}</span></div>
       <div class="chip-row wrap"><span class="ty-pill">${temp.name}</span><span class="ty-pill">${kv[2]}</span><span class="ty-pill">${temp.words} · ${temp.tools}</span></div>
       <p>${esc(kv[4])}</p><p class="muted small"><b>${temp.name}s</b> seek ${esc(temp.core.charAt(0).toLowerCase() + temp.core.slice(1))}</p>
       <p class="muted small"><b>Needs:</b> ${esc(temp.needs)}. <b>Stressed by:</b> ${esc(temp.stress)}.</p></div>
-      ${relate(first, [['', ...TEMP_RELATE[kv[1]]]])}
-      <div class="row-end"><button class="btn ghost sm" data-ty="keirsey-clear">Clear</button><button class="btn ghost sm" data-ty="keirsey">Re-type</button></div>`
-    : `<p class="muted small">Answer 4 questions about how they talk and act, and the type is worked out for you.</p><button class="btn primary sm" data-ty="keirsey">Find their type</button>`;
+    ${relate(first, [['', ...TEMP_RELATE[kv[1]]]])}
+    <div class="row-end"><button class="btn ghost sm" data-ty="keirsey-clear">Clear</button><button class="btn ghost sm" data-ty="keirsey">Re-type</button></div>`;
+}
 
-  // Enneagram
-  const ennN = enneaLead(en);
-  const ennea = `${!(en.desire || en.fear || en.passion) ? `<p class="muted small">Answer 2 questions to find their likely type, or pick the desire, fear and passion one by one below.</p><button class="btn primary sm" data-ty="ennea-test">Take the 2-question test</button>` : ''}
+function enneaHTML(p) {
+  const en = enneaOf(p), ennN = enneaLead(en), any = en.desire || en.fear || en.passion;
+  return `${!any ? `<p class="muted small">Answer 2 questions to find their likely type, or pick the desire, fear and passion one by one below.</p><button class="btn primary sm" data-ty="ennea-test">Take the 2-question test</button>` : ''}
     ${ENNEA_PARTS.map(([k, label, idx, hint]) => { const n = en[k]; return `<button class="ty-pick" data-ty="ennea" data-part="${k}"><span class="ty-pick-label">${label}</span><span class="ty-pick-val">${n ? esc(ENNEA[n - 1][idx]) : `<span class="faint">${hint}</span>`}</span>${icon('chevR')}</button>`; }).join('')}
     ${enneaVerdict(en) ? `<p class="ty-verdict">${enneaVerdict(en)}</p>` : ''}
-    ${ennN ? enneaProfileHTML(ennN, p.enneaWing) + relate(first, [['', ...ENNEA_RELATE[ennN]]]) : ''}
-    ${en.desire || en.fear || en.passion ? '<div class="row-end"><button class="btn ghost sm" data-ty="ennea-test">Re-test</button></div>' : ''}`;
+    ${ennN ? enneaProfileHTML(ennN, p.enneaWing) + relate(firstName(p), [['', ...ENNEA_RELATE[ennN]]]) : ''}
+    ${any ? '<div class="row-end"><button class="btn ghost sm" data-ty="ennea-test">Re-test</button></div>' : ''}`;
+}
 
-  // Zodiac
-  const fromBday = !p.zodiac && zs;
-  const zodiac = zs ? `<div class="ty-result"><div class="ty-big">${zs[2]} ${zs[1]}</div>
+function zodiacHTML(p) {
+  const zs = zodiacOf(p), fromBday = !p.zodiac && zs;
+  if (!zs) return `<p class="muted small">Pick their sign; each one shows its birthday dates.</p><button class="btn primary sm" data-ty="zodiac">Pick sign</button>`;
+  return `<div class="ty-result"><div class="ty-big">${zs[2]} ${zs[1]}</div>
       <div class="chip-row wrap"><span class="ty-pill">${zs[4]}</span><span class="ty-pill">${zs[5]}</span>${fromBday ? '<span class="ty-pill">from birthday</span>' : ''}</div>
       <p>${esc(zs[6])}</p>${fromBday && nearCusp(p.fields.birthday) ? '<p class="muted small">Born on a cusp: depending on the year they may be the neighbouring sign. Tap Change to set it.</p>' : ''}</div>
-      ${relate(first, [['', zs[7], zs[8]]])}
-      <div class="row-end">${p.zodiac ? '<button class="btn ghost sm" data-ty="zodiac-clear">Use birthday</button>' : ''}<button class="btn ghost sm" data-ty="zodiac">Change</button></div>`
-    : `<p class="muted small">Pick their sign; each one shows its birthday dates.</p><button class="btn primary sm" data-ty="zodiac">Pick sign</button>`;
+    ${relate(firstName(p), [['', zs[7], zs[8]]])}
+    <div class="row-end">${p.zodiac ? '<button class="btn ghost sm" data-ty="zodiac-clear">Use birthday</button>' : ''}<button class="btn ghost sm" data-ty="zodiac">Change</button></div>`;
+}
 
+// Every do / don't that applies, deepest lenses first: [do, don't, source tag, lens]
+function relateAll(p) {
+  const tr = traitsOf(p), kv = keirseyOf(p), n = enneaLead(enneaOf(p)), zs = zodiacOf(p);
+  const out = [];
+  if (n) out.push([...ENNEA_RELATE[n], `Type ${n}`, 'ennea']);
+  if (kv) out.push([...TEMP_RELATE[kv[1]], kv[1], 'temp']);
+  TRAITS.filter(t => tr[t.k] && tr[t.k] !== 3).sort((a, b) => Math.abs(tr[b.k] - 3) - Math.abs(tr[a.k] - 3))
+    .forEach(t => out.push([...TRAIT_RELATE[t.k][tr[t.k] > 3 ? 'hi' : 'lo'], `${t.abbr} ${tr[t.k] > 3 ? '↑' : '↓'}`, 'big5']));
+  if (zs) out.push([zs[7], zs[8], zs[1], 'zodiac']);
+  return out;
+}
+// "Share adventures and ideas, stay positive…" → "Share adventures and ideas" (keep going if that's under 3 words)
+const firstClause = s => {
+  const parts = s.replace(/\.$/, '').split(/[;:]|, (?:or |and )?/);
+  let out = parts[0];
+  for (let i = 1; i < parts.length && out.split(' ').length < 3; i++) out += ', ' + parts[i];
+  return out;
+};
+
+const LENSES = {
+  big5: ['Big Five', p => TRAITS.map(t => `<section class="ty-sheet-sec"><h3>${t.name}${t.alt ? ` <span class="faint small">${t.alt}</span>` : ''}</h3>${traitHTML(p, t)}</section>`).join('') + ABOUT.big5],
+  temp: ['Temperament', p => keirseyHTML(p) + ABOUT.temp],
+  ennea: ['Enneagram', p => enneaHTML(p) + ABOUT.ennea],
+  zodiac: ['Zodiac', p => zodiacHTML(p) + ABOUT.zodiac],
+  relate: ['How to relate', p => { const rows = relateAll(p); return rows.length ? relate(firstName(p), rows.map(([d, n, tag]) => [tag, d, n])) : '<p class="muted">Fill in a lens to see advice here.</p>'; }],
+};
+
+// A lens, or one Big Five trait (lens "trait:O"), in a sheet. Changes redraw it and the page.
+function lensSheet(id, lens, redrawPage) {
+  const trait = lens.startsWith('trait:') && TRAITS.find(t => t.k === lens.slice(6));
+  sheet({
+    title: trait ? trait.name : LENSES[lens][0],
+    className: 'ty-sheet',
+    render(body, close) {
+      const draw = () => {
+        const p = get('people', id);
+        body.innerHTML = trait ? traitHTML(p, trait) + `<button class="link small ty-all" data-ty="lens" data-lens="big5">All five traits</button>` : LENSES[lens][1](p);
+      };
+      draw();
+      body.addEventListener('click', e => {
+        const l = e.target.closest('[data-lens]');
+        if (l) { close(); lensSheet(id, l.dataset.lens, redrawPage); return; }
+        handlePersonality(e, id, () => { const st = body.scrollTop; draw(); body.scrollTop = st; redrawPage(); });
+      });
+    },
+  });
+}
+
+// ---------- the dashboard ----------
+export function personalityTab(p) {
+  const first = firstName(p);
+  const tr = traitsOf(p), kv = keirseyOf(p), en = enneaOf(p), zs = zodiacOf(p), n = enneaLead(en);
+  const filled = [Object.keys(tr).length === 5, !!kv, !!n, !!zs].filter(Boolean).length;
+  const rows = TRAITS.map(t => {
+    const v = tr[t.k];
+    return `<button class="ty-row5" data-ty="lens" data-lens="trait:${t.k}" aria-label="${t.name}: ${v ? LEVEL[v] : 'not rated'}">
+      <span class="ty-row5-name">${t.short}</span>
+      <span class="ty-meter" aria-hidden="true">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= (v || 0) ? 'on' : ''}"></i>`).join('')}</span>
+      <span class="ty-row5-lvl ${v ? '' : 'rate'}">${v ? LEVEL[v] : 'Rate'}</span></button>`;
+  }).join('');
+  const w = n && ENNEA_PROFILE[n].wings[p.enneaWing] ? p.enneaWing : null;
+  const tiles = [
+    ['temp', 'Temperament', kv ? kv[3] : 'Find type', kv ? `${kv[0]} · ${TEMPERAMENTS[kv[1]].name}` : '4 questions'],
+    ['ennea', 'Enneagram', n ? (w ? `Type ${n}w${w}` : `Type ${n}`) : 'Find type', n ? (w ? ENNEA_PROFILE[n].wings[w].replace(/^The /, '') : ENNEA[n - 1][1]) : '2 questions'],
+    ['zodiac', 'Zodiac', zs ? zs[1] : 'Pick sign', zs ? `${zs[4]} · ${zs[5]}` : 'from birthday'],
+  ].map(([k, label, big, sub]) => `<button class="ty-tile ${big.startsWith('Find') || big.startsWith('Pick') ? 'empty' : ''}" data-ty="lens" data-lens="${k}">
+      <span class="ty-tile-label">${label}</span><span class="ty-tile-big">${esc(big)}</span><span class="ty-tile-sub">${esc(sub)}</span></button>`).join('');
+  const all = relateAll(p);
+  const dos = all.slice(0, 2), donts = all.slice(0, 1);
+  const tip = (ok, text, tag) => `<div class="ty-tip">${icon(ok ? 'check' : 'x')}<span>${esc(firstClause(text))}</span><em>${esc(tag)}</em></div>`;
   return `
-    <p class="muted small pad-x ty-intro">Your read of ${esc(first)}, ${filled}/4 lenses filled. Tap <b>ⓘ</b> to learn what to look for. These are impressions to refine over time, not diagnoses.</p>
-    ${card('Big Five traits', Object.keys(tr).length ? `${Object.keys(tr).length}/5` : '', big5 + b5relate + info('About the Big Five', '<p>The most researched model of personality (Costa &amp; McCrae). Each trait is a spectrum; most people sit near the middle. Each also splits into six <b>facets</b> (the NEO PI-R’s 30), which show where within a trait someone stands out: two people with the same Extraversion can differ a lot in Warmth versus Excitement seeking. Ratings by people who know someone well are valid and add to what they would say about themselves (Vazire, 2010).</p>'))}
-    ${card('Temperament', 'Please Understand Me II', keirsey + info('About Keirsey’s temperaments', '<p>David Keirsey sorts people by two things you can observe: what they talk about (<b>concrete</b> vs <b>abstract</b>) and how they pursue goals (<b>cooperative</b> vs <b>utilitarian</b>). That gives four temperaments: Artisan, Guardian, Idealist and Rational. Each splits into two roles and four of the 16 types (e.g. Champion = ENFP).</p><p class="muted">Popular and practical, but with weaker scientific support than the Big Five. Treat it as a lens.</p>'))}
-    ${card('Enneagram core', '', ennea + info('About the Enneagram core', '<p>Each of the nine types is driven by a <b>core desire</b>, defended against a <b>core fear</b> (Riso &amp; Hudson), and has a <b>passion</b>, the “sin” or emotional habit that takes over (Ichazo, Naranjo). Picking them separately lets you notice when someone does not fit one type neatly.</p><p>The quick test crosses two groupings Riso &amp; Hudson use in their QUEST sorter: how someone goes after what they want, and how they react when things go wrong. Each pair points to one type.</p><p class="muted">A reflection tool with little scientific validation.</p>'))}
-    ${card('Zodiac', '', zodiac + disclaimer('Astrology has <b>no scientific support</b>. In a double-blind test, astrologers could not match birth charts to personality profiles better than chance (Carlson, <i>Nature</i>, 1985), and large studies find no link between sun sign and personality. Use it as a fun conversation lens, and because it matters to people who believe in it.'))}
+    <section class="card pad ty-dash">
+      <div class="ty-dash-head"><h3>Big Five</h3><button class="link small" data-ty="lens" data-lens="big5">Facets &amp; what to look for</button></div>
+      ${rows}
+    </section>
+    <div class="ty-tiles">${tiles}</div>
+    <section class="card pad ty-dash">
+      <div class="ty-dash-head"><h3>How to relate to ${esc(first)}</h3>${all.length ? '<button class="link small" data-ty="lens" data-lens="relate">See all</button>' : ''}</div>
+      ${all.length ? `<div class="ty-tips ok">${dos.map(r => tip(true, r[0], r[2])).join('')}</div><div class="ty-tips no">${donts.map(r => tip(false, r[1], r[2])).join('')}</div>`
+        : '<p class="muted small">Rate a trait or find a type, and the advice that fits them shows up here.</p>'}
+    </section>
+    <p class="muted small pad-x ty-intro">Your read of ${esc(first)}, ${filled}/4 lenses filled. These are impressions to refine over time, not diagnoses.</p>
     <details class="card pad why"><summary><b>Sources</b></summary>
       <p>Costa, P. &amp; McCrae, R. (1992). <i>NEO PI-R Professional Manual.</i> · Vazire, S. (2010). Who knows what about a person? <i>J. Personality &amp; Social Psychology.</i></p>
       <p>Keirsey, D. (1998). <i>Please Understand Me II.</i></p>
@@ -143,6 +222,7 @@ export function handlePersonality(e, id, redraw) {
   const b = e.target.closest('[data-ty]');
   if (!b) return false;
   const act = b.dataset.ty;
+  if (act === 'lens') { lensSheet(id, b.dataset.lens, redraw); return true; }
   if (act === 'keirsey') keirseySheet(p(), code => { put({ keirsey: code }); redraw(); });
   if (act === 'keirsey-clear') { const prev = keirseyOf(p())?.[0]; put({ keirsey: null, fields: { ...p().fields, mbti: '' } }); redraw(); toast('Cleared', { action: 'Undo', onAction: () => { put({ keirsey: prev }); redraw(); } }); }
   if (act === 'ennea') enneaSheet(p(), b.dataset.part, n => { put({ enneagram: { ...enneaOf(p()), [b.dataset.part]: n } }); redraw(); });

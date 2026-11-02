@@ -4,19 +4,19 @@
 // ---------- Big Five ----------
 // ---------- Big Five ----------
 export const TRAITS = [
-  { k: 'O', name: 'Openness', what: 'Curiosity, imagination, and appetite for new ideas, art and experiences.',
+  { k: 'O', short: 'Openness', abbr: 'Open', name: 'Openness', what: 'Curiosity, imagination, and appetite for new ideas, art and experiences.',
     high: 'curious, imaginative, unconventional; loves ideas, art and novelty', low: 'practical and down-to-earth; prefers the familiar and proven',
     look: 'Easy to read from what they talk about, read, watch and try. Others often judge it as well as people judge themselves.' },
-  { k: 'C', name: 'Conscientiousness', what: 'Organisation, reliability, self-discipline and planning.',
+  { k: 'C', short: 'Conscientiousness', abbr: 'Consc', name: 'Conscientiousness', what: 'Organisation, reliability, self-discipline and planning.',
     high: 'organised, punctual, follows through, plans ahead', low: 'spontaneous and flexible; messy, late or leaves things unfinished',
     look: 'Watch punctuality, how they keep small promises, and the state of their space and work.' },
-  { k: 'E', name: 'Extraversion', what: 'Energy from people and activity: talkativeness, assertiveness, enthusiasm.',
+  { k: 'E', short: 'Extraversion', abbr: 'Extra', name: 'Extraversion', what: 'Energy from people and activity: talkativeness, assertiveness, enthusiasm.',
     high: 'outgoing, talkative, energised by groups, quick to speak up', low: 'reserved, quieter, recharges alone, thinks before speaking',
     look: 'The easiest trait to judge, even after a short meeting.' },
-  { k: 'A', name: 'Agreeableness', what: 'Warmth, trust, cooperation and consideration for others.',
+  { k: 'A', short: 'Agreeableness', abbr: 'Agree', name: 'Agreeableness', what: 'Warmth, trust, cooperation and consideration for others.',
     high: 'kind, accommodating, trusting; avoids conflict', low: 'blunt, sceptical, competitive; comfortable with conflict',
     look: 'Watch how they treat people who can do nothing for them, and how they handle disagreement.' },
-  { k: 'N', name: 'Emotional sensitivity', alt: 'Neuroticism', what: 'How strongly they react to stress: worry, moodiness, feeling things hard.',
+  { k: 'N', short: 'Sensitivity', abbr: 'Sens', name: 'Emotional sensitivity', alt: 'Neuroticism', what: 'How strongly they react to stress: worry, moodiness, feeling things hard.',
     high: 'worries, moody, stress hits hard and lingers', low: 'calm, even-tempered, bounces back quickly',
     look: 'The hardest to see from outside, because people hide inner distress. Rate it after you have seen them under pressure.' },
 ];

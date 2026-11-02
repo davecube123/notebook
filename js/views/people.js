@@ -214,18 +214,21 @@ function renderPerson(main, id, query) {
       </header>
       <div class="person-hero">
         <label class="avatar-edit" title="Change photo">${avatar(p, 'xl')}<span class="avatar-cam">${icon('camera')}</span><input type="file" accept="image/*" hidden data-photo></label>
-        <input class="person-title" value="${esc(p.name)}" data-name aria-label="Name">
-        <input class="person-summary" value="${esc(p.summary || '')}" placeholder="Who are they, in a line?" data-summary aria-label="Summary">
-        <div class="chip-row center wrap">
-          <button class="chip ${p.circle ? 'on' : ''}" data-act="circle">${esc(p.circle || 'Set circle')}${icon('chevD')}</button>
-          ${(p.tags || []).map(t => `<span class="tag-chip">#${esc(t)}<button data-rmtag="${esc(t)}" aria-label="Remove">${icon('x')}</button></span>`).join('')}
-          <button class="chip ghost" data-act="tag">${icon('tag')}Tag</button>
+        <div class="ph-text">
+          <input class="person-title" value="${esc(p.name)}" data-name aria-label="Name">
+          <input class="person-summary" value="${esc(p.summary || '')}" placeholder="Who are they, in a line?" data-summary aria-label="Summary">
         </div>
-        <div class="person-facts">
-          <div><b>${ls ? relDays(ls) : '—'}</b><span>last seen</span></div>
-          <div><b>${(p.interactions || []).length}</b><span>encounters</span></div>
-          <div><b>${p.fields?.metDate ? relDays(p.fields.metDate).replace(' ago', '') : '—'}</b><span>known</span></div>
-          ${nb ? `<div><b>${nb.inDays === 0 ? 'Today!' : nb.inDays + 'd'}</b><span>to birthday</span></div>` : ''}
+        <div class="ph-meta">
+          <div class="chip-row wrap">
+            <button class="chip ${p.circle ? 'on' : ''}" data-act="circle">${esc(p.circle || 'Set circle')}${icon('chevD')}</button>
+            ${(p.tags || []).map(t => `<span class="tag-chip">#${esc(t)}<button data-rmtag="${esc(t)}" aria-label="Remove">${icon('x')}</button></span>`).join('')}
+            <button class="chip ghost" data-act="tag">${icon('tag')}Tag</button>
+          </div>
+          <p class="person-facts">${[
+            ls ? `seen ${relDays(ls)}` : 'not seen yet',
+            `${(p.interactions || []).length} encounter${(p.interactions || []).length === 1 ? '' : 's'}`,
+            nb ? (nb.inDays === 0 ? '<b>birthday today!</b>' : `birthday in ${nb.inDays}d`) : '',
+          ].filter(Boolean).join(' · ')}</p>
         </div>
         ${rc ? `<div class="banner warn">${icon('bell')}It's been ${rc.gap === Infinity ? 'a while' : rc.gap + ' days'} — you wanted to stay in touch every ${p.fields.keepInTouch.toLowerCase()}.</div>` : ''}
       </div>
