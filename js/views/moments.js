@@ -23,15 +23,63 @@ export const MOMENT_ICONS = [
   ['money', 'Money', '#30B0C7', 'M3 7h18v10H3ZM12 14.5a2.5 2.5 0 1 0 0-5a2.5 2.5 0 0 0 0 5ZM6 10v.01M18 14v.01', ['paid', 'salary', 'payday', 'bought', 'buy', 'spent', 'money', 'bills', 'shopping', 'sold', 'saved']],
   ['health', 'Health', '#FF453A', 'M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7Z', ['doctor', 'dentist', 'sick', 'fever', 'hospital', 'medicine', 'checkup', 'headache', 'migraine']],
 ];
-const BY_KEY = new Map(MOMENT_ICONS.map(i => [i[0], i]));
+
+// More icons without names, shown under "More icons". Same shape: the label is used
+// only for screen readers.
+const ring = (x, y, r) => `M${x - r} ${y}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
+export const EXTRA_ICONS = [
+  ['gift', 'Gift', '#FF6482', 'M3 8h18v4H3ZM5 12v9h14v-9M12 8v13M12 8S10 3 7.5 4.5 9 8 12 8ZM12 8s2-5 4.5-3.5S15 8 12 8Z', ['gift', 'gifts', 'present']],
+  ['film', 'Movie', '#BF5AF2', 'M4 4h16v16H4ZM8 4v16M16 4v16M4 9h4M4 15h4M16 9h4M16 15h4', ['movie', 'movies', 'film', 'cinema', 'netflix', 'series']],
+  ['game', 'Games', '#7D7AFF', 'M6 9h12a4 4 0 0 1 0 8c-1.5 0-2.5-1-3-2H9c-.5 1-1.5 2-3 2a4 4 0 0 1 0-8ZM8 11v3M6.5 12.5h3M15.5 12h.01M17.5 14h.01', ['game', 'games', 'gaming', 'played', 'board game', 'chess']],
+  ['camera', 'Photo', '#8E8E93', 'M4 8h3l2-3h6l2 3h3v11H4Z' + ring(12, 13.5, 3.5), ['photo', 'photos', 'photoshoot', 'pictures', 'camera']],
+  ['car', 'Drive', '#64D2FF', 'M3 13l2-6h14l2 6v4H3ZM5 17v2M19 17v2M7 13.5h.01M17 13.5h.01', ['drive', 'drove', 'car', 'traffic', 'ride']],
+  ['plane', 'Flight', '#40C8E0', 'M22 2 11 13M22 2l-7 20-4-9-9-4Z', ['flight', 'flew', 'plane', 'airport']],
+  ['bike', 'Bike', '#32D74B', ring(5.5, 17, 3.5) + ring(18.5, 17, 3.5) + 'M5.5 17 9 9h6l3.5 8M9 9l3 8M14 5h3', ['bike', 'biked', 'cycling', 'cycled']],
+  ['tree', 'Nature', '#30D158', 'M12 3 6 12h3l-4 6h14l-4-6h3ZM12 18v3', ['nature', 'forest', 'trees', 'camping']],
+  ['leaf', 'Plants', '#34C759', 'M5 19C5 10 11 5 20 4c-1 9-6 15-15 15ZM5 19l8-8', ['plant', 'plants', 'garden', 'gardening']],
+  ['mountain', 'Mountain', '#40C8E0', 'M3 20 9 9l4 6 3-4 5 9Z', ['mountain', 'summit', 'hiked']],
+  ['wave', 'Sea', '#0A84FF', 'M2 12c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2M2 17c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2', ['sea', 'ocean', 'swim', 'swam', 'surf', 'island']],
+  ['snow', 'Cold', '#64D2FF', 'M12 2v20M4 6l16 12M20 6 4 18', ['snow', 'cold', 'freezing']],
+  ['bolt', 'Energy', '#FFD60A', 'M13 2 4 14h7l-1 8 9-12h-7Z', ['energy', 'power', 'brownout', 'blackout']],
+  ['fire', 'Fire', '#FF9F0A', 'M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5c0 2 1 3 2 3c0-3-.5-5.5.5-8Z', ['bonfire', 'fire', 'grill', 'bbq']],
+  ['drop', 'Water', '#0A84FF', 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z', ['water', 'hydrate']],
+  ['pill', 'Medicine', '#FF453A', 'M10.5 20.5a5 5 0 0 1-7-7l6-6a5 5 0 0 1 7 7ZM8.5 8.5l7 7', ['pill', 'pills', 'vitamins']],
+  ['chat', 'Talk', '#0A84FF', 'M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.5A8 8 0 1 1 21 12Z', ['talk', 'talked', 'chat', 'conversation', 'texted', 'messaged']],
+  ['phone', 'Call', '#32D74B', 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2', ['phone', 'facetime', 'video call']],
+  ['mail', 'Mail', '#8E8E93', 'M3 6h18v12H3ZM3 7l9 6 9-6', ['email', 'letter', 'mail', 'package', 'parcel']],
+  ['pen', 'Writing', '#BF5AF2', 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z', ['journal', 'journaled', 'poem', 'poems', 'essay']],
+  ['code', 'Code', '#8E8E93', 'm8 8-4 4 4 4M16 8l4 4-4 4M14 4l-4 16', ['code', 'coded', 'coding', 'bug', 'app']],
+  ['laptop', 'Laptop', '#AEAEB2', 'M4 5h16v11H4ZM2 19h20', ['laptop', 'computer', 'online']],
+  ['cart', 'Shopping', '#30B0C7', 'M3 4h2l2.5 11h11L21 7H6.5M9 20h.01M18 20h.01', ['groceries', 'grocery', 'mall', 'market', 'shopee', 'lazada']],
+  ['bag', 'Luggage', '#40C8E0', 'M6 7h12v13H6ZM9 7V4h6v3M9 11v6M15 11v6', ['packed', 'packing', 'luggage', 'vacation', 'holiday']],
+  ['glass', 'Drinks', '#FF6482', 'M6 3h12l-2 8a4 4 0 0 1-8 0ZM12 15v6M8 21h8', ['drinks', 'drinking', 'cocktails', 'bar', 'toast']],
+  ['cake', 'Cake', '#FF6482', 'M4 21V12a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9M4 16c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5M3 21h18M12 10V6M12 3v.01', ['cake', 'dessert', 'baked', 'baking']],
+  ['tv', 'TV', '#7D7AFF', 'M3 6h18v12H3ZM8 21h8M8 2l4 4 4-4', ['tv', 'show', 'anime', 'binge', 'binged']],
+  ['paw', 'Pet', '#A2845E', 'M8 21c-2 0-3-1.5-3-3 0-3 4-6 7-6s7 3 7 6c0 1.5-1 3-3 3-1.5 0-2.5-1-4-1s-2.5 1-4 1Z' + ring(5, 10, 1.8) + ring(9.5, 6, 1.8) + ring(14.5, 6, 1.8) + ring(19, 10, 1.8), ['dog', 'cat', 'pet', 'puppy', 'kitten', 'vet']],
+  ['church', 'Faith', '#AC8E68', 'M12 2v5M9.5 4.5h5M6 21V11l6-4 6 4v10M10 21v-4a2 2 0 0 1 4 0v4', ['church', 'mass', 'pray', 'prayed', 'prayer']],
+  ['trophy', 'Win', '#FFD60A', 'M8 4h8v5a4 4 0 0 1-8 0ZM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6', ['trophy', 'champion', 'award', 'medal']],
+  ['flag', 'Goal', '#FF453A', 'M5 21V4M5 4h11l-2 4 2 4H5', ['goal', 'goals', 'started', 'decided']],
+  ['clock', 'Time', '#8E8E93', ring(12, 12, 9) + 'M12 7v5l3 2', ['late', 'early', 'overtime']],
+  ['umbrella', 'Umbrella', '#0A84FF', 'M12 3a9 9 0 0 1 9 9H3a9 9 0 0 1 9-9ZM12 12v7a2 2 0 0 0 4 0', ['umbrella', 'drizzle']],
+  ['key', 'Key', '#FFD60A', ring(7.5, 15.5, 4.5) + 'M10.7 12.3 20 3M17 6l3 3M15 8l2 2', ['keys', 'new place', 'moved in', 'locked']],
+  ['crown', 'Crown', '#FFD60A', 'M3 8l4 4 5-7 5 7 4-4-2 11H5Z', ['queen', 'king', 'proud']],
+  ['sparkles', 'Magic', '#BF5AF2', 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8ZM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z', ['magic', 'magical', 'amazing', 'wow', 'surprise', 'surprised']],
+];
+const BY_KEY = new Map([...MOMENT_ICONS, ...EXTRA_ICONS].map(i => [i[0], i]));
 export const momentIcon = key => BY_KEY.get(key) || MOMENT_ICONS[0];
 
-// The first icon whose words appear in the text. Specific ones are checked before "with".
+// The icon whose words appear earliest in the text ("Movie night at home" → movie).
+// Ties go to the more specific icon; the broad ones ("with", "trip") come last.
 export function guessIcon(text) {
   const t = ` ${(text || '').toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ')} `;
-  const has = w => t.includes(` ${w} `) || (w.length > 4 && t.includes(` ${w}`));
-  const order = ['sun', 'love', 'workout', 'health', 'food', 'music', 'learn', 'work', 'rain', 'rest', 'home', 'money', 'star', 'place', 'people'];
-  return order.find(k => momentIcon(k)[4].some(has)) || null;
+  const at = w => { const i = t.indexOf(` ${w} `); return i >= 0 ? i : w.length > 4 ? t.indexOf(` ${w}`) : -1; };
+  const order = ['sun', 'love', 'workout', 'health', 'food', 'music', 'learn', 'work', 'rain', 'rest', 'home', 'money', ...EXTRA_ICONS.map(i => i[0]), 'star', 'place', 'people'];
+  let best = null, bestAt = Infinity;
+  for (const k of order) {
+    const pos = Math.min(...momentIcon(k)[4].map(at).filter(x => x >= 0));
+    if (pos < bestAt) { best = k; bestAt = pos; }
+  }
+  return best;
 }
 
 export const iconSVG = (key, size = 18, sw = 2) => {
@@ -70,6 +118,9 @@ export function momentSheet({ date = today(), moment = null, onDone } = {}) {
         <label class="mo-input"><span class="mo-preview"></span><input name="text" placeholder="What happened?" autocomplete="off" enterkeyhint="done" maxlength="140" value="${esc(moment?.text || '')}" aria-label="What happened?"></label>
         <p class="muted small mo-hint"></p>
         <div class="mo-grid" role="radiogroup" aria-label="Icon">${MOMENT_ICONS.map(([k, label, color]) => `<button type="button" class="mo-pick" role="radio" data-icon="${k}" style="--c:${color}">${iconSVG(k, 22)}<span>${label}</span></button>`).join('')}</div>
+        <details class="mo-more" ${EXTRA_ICONS.some(i => i[0] === moment?.icon) ? 'open' : ''}><summary>More icons</summary>
+          <div class="mo-grid mini" role="radiogroup" aria-label="More icons">${EXTRA_ICONS.map(([k, label, color]) => `<button type="button" class="mo-pick mini" role="radio" data-icon="${k}" style="--c:${color}" aria-label="${label}" title="${label}">${iconSVG(k, 22)}</button>`).join('')}</div>
+        </details>
         <div class="row-between">${editing ? '<button type="button" class="btn ghost danger-text" data-del>Delete</button>' : '<span></span>'}<button class="btn primary">${editing ? 'Save' : 'Add moment'}</button></div>
       </form>`;
       const f = body.querySelector('form'), inp = f.text, hint = body.querySelector('.mo-hint');
