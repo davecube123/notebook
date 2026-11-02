@@ -187,10 +187,10 @@ function tabHTML(p, tab) {
     return `<form class="card pad log-form" data-log-form>
         <div class="grid2"><input class="input" type="date" name="date" value="${today()}" aria-label="Date"><input class="input" name="where" placeholder="Where" aria-label="Where"></div>
         <textarea class="input" name="note" rows="2" placeholder="What happened? What did you learn about them?" aria-label="Note"></textarea>
-        <div class="row-between"><div class="mood-pick">${['😊', '😐', '😟', '😡', '🥰', '🤔'].map(m => `<button type="button" data-mood="${m}">${m}</button>`).join('')}</div><button class="btn primary sm">${icon('plus')}Log encounter</button></div>
+        <div class="row-end"><button class="btn primary sm">${icon('plus')}Log encounter</button></div>
       </form>
       ${ints.length ? `<div class="timeline">${ints.map(i => `<div class="tl-item"><div class="tl-dot"></div><div class="tl-body">
-        <div class="tl-head"><b>${fmtDay(i.date, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</b><span class="muted small">${relDays(i.date)}${i.where ? ' · ' + esc(i.where) : ''}</span>${i.mood ? `<span>${i.mood}</span>` : ''}
+        <div class="tl-head"><b>${fmtDay(i.date, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</b><span class="muted small">${relDays(i.date)}${i.where ? ' · ' + esc(i.where) : ''}</span>
         <button class="icon-btn sm" data-int-del="${i.id}" aria-label="Delete">${icon('x')}</button></div>
         ${i.note ? `<div class="tl-note">${esc(i.note).replace(/\n/g, '<br>')}</div>` : ''}</div></div>`).join('')}</div>`
       : '<p class="muted">No encounters logged yet.</p>'}`;
@@ -244,7 +244,6 @@ function renderPerson(main, id, query) {
 
   const saveName = debounce(v => v.trim() && update({ name: v.trim() }), 400);
   const saveSummary = debounce(v => update({ summary: v.trim() }), 400);
-  let mood = '';
 
   main.oninput = e => {
     if (e.target.matches('[data-name]')) saveName(e.target.value);
@@ -261,8 +260,8 @@ function renderPerson(main, id, query) {
     e.preventDefault();
     if (!f.note.value.trim() && !f.where.value.trim()) { toast('Add a note or a place'); return; }
     const p = get('people', id);
-    update({ interactions: [...(p.interactions || []), { id: uid(), date: f.date.value || today(), where: f.where.value.trim(), note: f.note.value.trim(), mood }] }, { redraw: true });
-    mood = ''; haptic(); toast('Encounter logged');
+    update({ interactions: [...(p.interactions || []), { id: uid(), date: f.date.value || today(), where: f.where.value.trim(), note: f.note.value.trim() }] }, { redraw: true });
+    haptic(); toast('Encounter logged');
   };
   main.onclick = async e => {
     const redraw = () => { const st = main.scrollTop; draw(); main.scrollTop = st; };
@@ -289,8 +288,6 @@ function renderPerson(main, id, query) {
       navigate(`#/notes/${n.id}`);
       return;
     }
-    const md = e.target.closest('[data-mood]');
-    if (md) { mood = mood === md.dataset.mood ? '' : md.dataset.mood; md.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.mood === mood)); return; }
     const idel = e.target.closest('[data-int-del]');
     if (idel) { const p = get('people', id); const it = p.interactions.find(i => i.id === idel.dataset.intDel); update({ interactions: p.interactions.filter(i => i !== it) }, { redraw: true }); toast('Encounter removed', { action: 'Undo', onAction: () => { const p2 = get('people', id); update({ interactions: [...p2.interactions, it] }, { redraw: true }); } }); return; }
     const rt = e.target.closest('[data-rmtag]');
