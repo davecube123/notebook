@@ -162,6 +162,7 @@ function showLock() {
 async function boot() {
   try {
     await loadAll();
+    (await import('./views/templates.js')).migrateTemplates();
   } catch (err) {
     $('#main').innerHTML = `<div class="page"><div class="empty"><h3>Storage unavailable</h3><p>Your browser blocked local storage (private mode?). Almanac needs it to save your notes.</p></div></div>`;
     console.error(err); return;

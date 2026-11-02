@@ -985,3 +985,10 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .chip .ic { width: 14px; height: 14px; }
 .tag-hint { margin: 10px 2px 0; }
 .today-version { margin-top: 18px; }
+.tpl-banner { margin-bottom: 14px; }
+.tpl-banner .ic { width: 18px; height: 18px; flex: none; color: var(--accent); }
+.tpl-actions { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 6px 14px; margin-left: 34px; }
+.tpl-actions .ty-info { margin-left: 0; flex: 1 1 auto; }
+.tpl-actions .link .ic { width: 14px; height: 14px; }
+.tpl-head { margin-top: 4px; }
+.tpl-head .feel-label { margin-bottom: 8px; }

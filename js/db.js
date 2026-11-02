@@ -71,7 +71,12 @@ export function remove(store, id) {
   notify(store);
 }
 
-export function list(store) { return [...state[store].values()]; }
+// Your own note templates are notes with isTemplate: they're edited like notes but kept out of
+// every notes list. Pass { all: true } to include them (backups, the template picker).
+export function list(store, { all = false } = {}) {
+  const xs = [...state[store].values()];
+  return store === 'notes' && !all ? xs.filter(n => !n.isTemplate) : xs;
+}
 export function get(store, id) { return state[store].get(id); }
 
 export function uid() {
@@ -107,7 +112,7 @@ export function setSettings(patch) {
 // ---- backup ----
 export function exportData() {
   const out = { app: 'almanac', version: 1, exportedAt: new Date().toISOString() };
-  for (const s of STORES) out[s] = list(s);
+  for (const s of STORES) out[s] = list(s, { all: true });
   return out;
 }
 

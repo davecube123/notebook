@@ -1,7 +1,7 @@
 // Note templates and the daily note. The built-in templates are each based on a writing
 // or reflection technique with research behind it; "Why it works" cites the sources.
-import { list, save, uid, settings, setSettings } from '../db.js';
-import { esc, today, fmtLongDay, fmtDay, parseDay } from '../util.js';
+import { list, save, remove, uid, settings, setSettings } from '../db.js';
+import { esc, today, fmtLongDay, fmtDay, parseDay, htmlToText } from '../util.js';
 import { icon } from '../icons.js';
 import { navigate } from '../router.js';
 import { sheet, toast, confirmDialog, promptDialog } from '../ui.js';
@@ -116,20 +116,41 @@ export const TEMPLATES = [
 ];
 
 // ---------- lookup ----------
-const userTemplates = () => settings().noteTemplates || [];
+// Your templates are notes marked isTemplate; the title is the template's name.
+const asTemplate = n => ({ id: n.id, name: n.title?.trim() || 'Untitled template', html: n.html || '', tags: n.tags || [], titleText: '', mine: true });
+export const userTemplates = () => list('notes', { all: true }).filter(n => n.isTemplate && !n.trashed && (n.title || n.text))
+  .sort((a, b) => (a.title || '').localeCompare(b.title || '')).map(asTemplate);
+
+// templates saved by v3.8–3.14 lived in settings; move them to template notes once
+export function migrateTemplates() {
+  const old = settings().noteTemplates || [];
+  if (!old.length) return;
+  old.forEach(t => save('notes', { id: t.id, isTemplate: true, title: t.name, html: t.html, text: htmlToText(t.html), tags: t.tags || [], pinned: false, archived: false, trashed: false, created: t.created || Date.now(), updated: Date.now(), draft: false }, { silent: true }));
+  setSettings({ noteTemplates: [] });
+}
+
+// Create a template to edit in the note editor; from a built-in, start with a copy of it.
+export function newTemplate(fromId) {
+  const src = fromId && findTemplate(fromId);
+  const html = src ? render(src, today()).html : '';
+  const n = newNote({ isTemplate: true, title: src ? `My ${src.name.toLowerCase()}` : '', html, text: htmlToText(html), tags: [...(src?.tags || [])], draft: !src });
+  if (src) save('notes', { ...n, draft: false }, { silent: true });
+  navigate(`#/notes/${n.id}`);
+  return n;
+}
 export const findTemplate = id => TEMPLATES.find(t => t.id === id) || userTemplates().find(t => t.id === id) || null;
 
 function render(tpl, date) {
   return tpl.html instanceof Function
     ? { html: tpl.html(), title: tpl.title(date) }
-    : { html: tpl.html, title: tpl.titleText ? tpl.titleText : '' };
+    : { html: tpl.html, title: `${tpl.name} · ${fmtDay(date, { month: 'short', day: 'numeric' })}` };
 }
 
 // Make a note from a template. The note is "seeded": if you leave without writing, it's discarded.
 export function noteFromTemplate(id, { date = today(), extra = {} } = {}) {
   const tpl = findTemplate(id) || TEMPLATES[0];
   const { html, title } = render(tpl, date);
-  const text = new DOMParser().parseFromString(html, 'text/html').body.innerText || '';
+  const text = htmlToText(html);
   return newNote({ html, title, text, tags: [...(tpl.tags || [])], seeded: true, template: tpl.id, ...extra });
 }
 
@@ -153,9 +174,10 @@ export async function saveAsTemplate(note) {
   if (!name?.trim()) return;
   // keep the structure, not the ticks
   const html = (note.html || '').replace(/<li class="checked">/g, '<li>');
-  const tpl = { id: 'u_' + uid(), name: name.trim(), html, tags: (note.tags || []).filter(t => t !== 'daily'), titleText: '', created: Date.now() };
-  setSettings({ noteTemplates: [...userTemplates(), tpl] });
-  toast(`Saved template “${tpl.name}”`);
+  const now = Date.now();
+  const tpl = { id: uid(), isTemplate: true, title: name.trim(), html, text: note.text || '', tags: (note.tags || []).filter(t => t !== 'daily'), pinned: false, archived: false, trashed: false, created: now, updated: now, draft: false };
+  save('notes', tpl, { silent: true });
+  toast(`Saved template “${tpl.title}”`, { action: 'Edit', onAction: () => navigate(`#/notes/${tpl.id}`) });
 }
 
 // ---------- picker ----------
@@ -168,15 +190,16 @@ export function templateSheet({ onPick } = {}) {
         const dailyTpl = findTemplate(st.dailyTemplate) ? st.dailyTemplate : 'daily';
         const row = t => `<div class="tpl-item">
             <button class="tpl-pick" data-tpl="${esc(t.id)}">${icon(t.icon || 'notes')}<span><b>${esc(t.name)}</b><span class="muted small">${esc(t.purpose || 'Your template')}</span></span>${icon('chevR')}</button>
-            ${t.why ? `<details class="ty-info"><summary>${icon('info')}Why it works</summary><div>${t.why.map(([c, s]) => `<p>${esc(c)}${s ? `<br><span class="muted small">${esc(s)}</span>` : ''}</p>`).join('')}</div></details>` : ''}
+            <div class="tpl-actions">${t.why ? `<details class="ty-info"><summary>${icon('info')}Why it works</summary><div>${t.why.map(([c, s]) => `<p>${esc(c)}${s ? `<br><span class="muted small">${esc(s)}</span>` : ''}</p>`).join('')}</div></details>` : ''}
+              <button class="link small" data-copy="${esc(t.id)}">${icon('copy')}Make my own version</button></div>
           </div>`;
         body.innerHTML = `
           <button class="btn primary block" data-daily>${icon('today')}${todayNote ? 'Open today’s note' : 'Start today’s note'}</button>
           <div class="feel-label">Research-backed</div>
           <div class="card list-card tpl-list">${TEMPLATES.map(row).join('')}</div>
-          <div class="feel-label">Yours</div>
-          ${mine.length ? `<div class="card list-card tpl-list">${mine.map(t => `<div class="tpl-item row-between"><button class="tpl-pick grow" data-tpl="${esc(t.id)}">${icon('notes')}<span><b>${esc(t.name)}</b></span></button><button class="icon-btn sm" data-del="${esc(t.id)}" aria-label="Delete ${esc(t.name)}">${icon('trash')}</button></div>`).join('')}</div>`
-            : '<p class="muted small">Make your own: open any note, tap ⋯ and choose “Save as template”.</p>'}
+          <div class="row-between tpl-head"><div class="feel-label">Yours</div><button class="link small" data-newtpl>${icon('plus')}New template</button></div>
+          ${mine.length ? `<div class="card list-card tpl-list">${mine.map(t => `<div class="tpl-item row-between"><button class="tpl-pick grow" data-tpl="${esc(t.id)}">${icon('notes')}<span><b>${esc(t.name)}</b></span></button><button class="icon-btn sm" data-edit="${esc(t.id)}" aria-label="Edit ${esc(t.name)}">${icon('edit')}</button><button class="icon-btn sm" data-del="${esc(t.id)}" aria-label="Delete ${esc(t.name)}">${icon('trash')}</button></div>`).join('')}</div>`
+            : '<p class="muted small">Write one from scratch with “New template”, start from a built-in with “Make my own version”, or turn any note into one from its ⋯ menu.</p>'}
           <label class="field tpl-daily"><span>The daily note uses</span><select class="input" data-daily-tpl>${[...TEMPLATES, ...mine].map(t => `<option value="${esc(t.id)}" ${t.id === dailyTpl ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</select></label>`;
       };
       draw();
@@ -184,11 +207,17 @@ export function templateSheet({ onPick } = {}) {
         if (e.target.closest('[data-daily]')) { close(); openDaily(); return; }
         const pick = e.target.closest('[data-tpl]');
         if (pick) { close(); if (onPick) onPick(pick.dataset.tpl); else { const n = noteFromTemplate(pick.dataset.tpl); navigate(`#/notes/${n.id}`); } return; }
+        if (e.target.closest('[data-newtpl]')) { close(); newTemplate(); return; }
+        const cp = e.target.closest('[data-copy]');
+        if (cp) { close(); newTemplate(cp.dataset.copy); toast('Your copy: edit it, then use it from Templates'); return; }
+        const ed = e.target.closest('[data-edit]');
+        if (ed) { close(); navigate(`#/notes/${ed.dataset.edit}`); return; }
         const del = e.target.closest('[data-del]');
         if (del) {
           const t = findTemplate(del.dataset.del);
           if (!(await confirmDialog(`Delete the template “${t.name}”? Notes made from it stay.`))) return;
-          setSettings({ noteTemplates: userTemplates().filter(x => x.id !== t.id), ...(settings().dailyTemplate === t.id ? { dailyTemplate: 'daily' } : {}) });
+          remove('notes', t.id);
+          if (settings().dailyTemplate === t.id) setSettings({ dailyTemplate: 'daily' });
           draw();
         }
       });

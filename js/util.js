@@ -66,6 +66,8 @@ export function htmlToText(html) {
   const d = document.createElement('div');
   d.innerHTML = html || '';
   d.querySelectorAll('li, p, div, h1, h2, h3, blockquote, pre, br').forEach(el => el.append('\n'));
+  // a block also starts on its own line (the first typed line of a note is a bare text node)
+  d.querySelectorAll('ul, ol, p, div, h1, h2, h3, blockquote, pre, hr').forEach(el => el.before('\n'));
   return d.textContent.replace(/\n{3,}/g, '\n\n').trim();
 }
 

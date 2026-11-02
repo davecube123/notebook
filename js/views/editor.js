@@ -313,7 +313,7 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
       ${embedded ? '<span></span>' : `<button class="icon-btn" data-act="back" aria-label="Back">${icon('back')}</button>`}
       <div class="editor-status muted small" aria-live="polite"></div>
       <div class="head-actions">
-        <button class="icon-btn ${note.pinned ? 'on' : ''}" data-act="pin" aria-label="Pin" title="Pin">${icon('pin')}</button>
+        ${note.isTemplate ? '' : `<button class="icon-btn ${note.pinned ? 'on' : ''}" data-act="pin" aria-label="Pin" title="Pin">${icon('pin')}</button>`}
         <button class="icon-btn" data-act="more" aria-label="More">${icon('more')}</button>
         ${embedded ? '' : `<button class="btn primary sm" data-act="done">Done</button>`}
       </div>
@@ -321,13 +321,14 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
     <div class="editor-scroll">
       <div class="editor-paper">
         ${note.trashed ? `<div class="banner">This note is in Trash. <button class="link" data-act="restore">Restore</button></div>` : ''}
-        <textarea class="note-title" rows="1" placeholder="Title" aria-label="Title">${esc(note.title)}</textarea>
+        ${note.isTemplate ? `<div class="banner tpl-banner">${icon('sparkle')}<span><b>Template.</b> Notes made from it start with everything below. Its title is the template’s name.</span></div>` : ''}
+        <textarea class="note-title" rows="1" placeholder="${note.isTemplate ? 'Template name' : 'Title'}" aria-label="${note.isTemplate ? 'Template name' : 'Title'}">${esc(note.title)}</textarea>
         <div class="tag-editor">
           <div class="tag-list"></div>
           <div class="tag-input-wrap"><span class="hash">#</span><input class="tag-input" placeholder="add tag" aria-label="Add tag" autocomplete="off" autocapitalize="off" enterkeyhint="done"><div class="tag-suggest"></div></div>
         </div>
         <div class="note-body" contenteditable="true" spellcheck="true" data-placeholder="Start writing… Add #tags and @people anywhere. Type  [ ]  for a checklist,  -  for bullets,  >  for a quote."></div>
-        ${!note.html && !note.title && note.draft && !note.trashed ? `<button class="chip ghost tpl-hint" data-act="template">${icon('sparkle')}Use a template</button>` : ''}
+        ${!note.html && !note.title && note.draft && !note.trashed && !note.isTemplate ? `<button class="chip ghost tpl-hint" data-act="template">${icon('sparkle')}Use a template</button>` : ''}
         ${note.daily ? `<div class="daily-nav"><button class="link small" data-act="day-prev">${icon('back')}${fmtDay(addDays(note.daily, -1))}</button>${note.daily < todayKey() ? `<button class="link small" data-act="day-next">${fmtDay(addDays(note.daily, 1))}${icon('chevR')}</button>` : ''}</div>` : ''}
       </div>
     </div>
@@ -565,6 +566,12 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
 
   function moreMenu(anchor) {
     persistSoon.flush(true); note = get('notes', id);
+    if (note.isTemplate) return menu(anchor, [
+      { label: 'New note from this template', icon: 'plus', action: () => { const n = noteFromTemplate(id); navigate(`#/notes/${n.id}`); } },
+      { label: 'All templates', icon: 'sparkle', action: () => templateSheet() },
+      '-',
+      { label: 'Delete template', icon: 'trash', danger: true, action: async () => { if (await confirmDialog(`Delete the template “${note.title || 'Untitled'}”? Notes made from it stay.`)) { remove('notes', id); navigate('#/notes'); toast('Template deleted'); } } },
+    ]);
     menu(anchor, [
       { label: note.archived ? 'Unarchive' : 'Archive', icon: 'archive', action: () => { save('notes', { ...note, archived: !note.archived, draft: false }); toast(note.archived ? 'Moved to Notes' : 'Archived'); navigate('#/notes'); } },
       { label: 'Duplicate', icon: 'copy', action: () => { const n = { ...note, id: uid(), title: (note.title || 'Untitled') + ' copy', created: Date.now(), updated: Date.now(), pinned: false }; save('notes', n); navigate(`#/notes/${n.id}`); } },
