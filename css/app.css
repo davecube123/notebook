@@ -972,3 +972,15 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .2); transition: transform .2s; }
 .switch:checked { background: var(--q-green); }
 .switch:checked::after { transform: translateX(20px); }
+
+/* Tag browser (notes.js) */
+.tag-tools { margin: 12px 0 10px; }
+.tag-browser { max-height: 52vh; overflow-y: auto; }
+.tag-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 14px 11px calc(14px + var(--depth, 0) * 18px); border-bottom: 1px solid var(--line); text-align: left; color: var(--ink); font-size: 16px; }
+.tag-row:last-child { border-bottom: 0; }
+.tag-check { width: 20px; height: 20px; flex: none; border-radius: 50%; border: 1.5px solid var(--faint); display: grid; place-items: center; }
+.tag-row.on .tag-check { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tag-check .ic { width: 13px; height: 13px; stroke-width: 3; }
+.tag-row.on .grow { font-weight: 600; }
+.chip .ic { width: 14px; height: 14px; }
+.tag-hint { margin: 10px 2px 0; }

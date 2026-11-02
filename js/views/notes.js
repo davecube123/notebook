@@ -158,9 +158,9 @@ function listHTML(activeId) {
     <label class="search-field">${icon('search')}<input id="note-search" type="search" placeholder="Search notes, #tags, from:2026-01-01" value="${esc(ui.q)}" autocomplete="off" enterkeyhint="search">${ui.q ? `<button class="clear-btn" data-act="clearq" aria-label="Clear">${icon('x')}</button>` : ''}</label>
     <div class="chip-row" role="toolbar" aria-label="Filters">
       <button class="chip ${ui.range !== 'any' ? 'on' : ''}" data-act="range">${icon('calendar')}${esc(rangeLabel)}${icon('chevD')}</button>
-      <button class="chip ${!ui.tags.length ? 'on' : ''}" data-tag="">All</button>
-      ${tags.map(([t, c]) => `<button class="chip ${ui.tags.includes(t) ? 'on' : ''}" data-tag="${esc(t)}">#${esc(t)}<span class="chip-count">${c}</span></button>`).join('')}
-      ${tags.length ? `<button class="chip ghost" data-act="tags">${icon('tag')}Manage</button>` : ''}
+      ${tags.length ? `<button class="chip ${ui.tags.length ? 'on' : ''}" data-act="browsetags">${icon('tag')}Tags${ui.tags.length ? ` · ${ui.tags.length}` : ''}${icon('chevD')}</button>` : ''}
+      ${ui.tags.map(t => `<button class="chip on" data-tag="${esc(t)}" aria-label="Remove #${esc(t)} filter">#${esc(t)}${icon('x')}</button>`).join('')}
+      ${recentTags().filter(t => !ui.tags.includes(t)).slice(0, 5).map(t => `<button class="chip" data-tag="${esc(t)}">#${esc(t)}</button>`).join('')}
     </div>
   </header>
   <div class="note-list">
@@ -296,7 +296,7 @@ function bindList(root, activeId) {
     if (act === 'reset') { Object.assign(ui, { q: '', tags: [], range: 'any', from: '', to: '' }); refreshList(); }
     if (act === 'range') rangeMenu(b, refreshList);
     if (act === 'viewmenu') viewMenu(b, refreshList);
-    if (act === 'tags') manageTags(refreshList);
+    if (act === 'browsetags') tagBrowser(refreshList);
     if (act === 'empty') {
       if (await confirmDialog('Permanently delete every note in Trash?', { ok: 'Empty Trash' })) {
         list('notes').filter(n => n.trashed).forEach(n => remove('notes', n.id));
@@ -353,6 +353,58 @@ function viewMenu(anchor, refresh) {
     { label: 'Archive', icon: 'archive', action: () => { ui.box = 'archive'; refresh(); }, checked: ui.box === 'archive' },
     { label: 'Trash', icon: 'trash', action: () => { ui.box = 'trash'; refresh(); }, checked: ui.box === 'trash' },
   ]);
+}
+
+// tags by when they were last used, newest first
+export function recentTags() {
+  const last = new Map();
+  for (const n of list('notes')) if (!n.trashed && !n.draft) for (const t of n.tags || []) last.set(t, Math.max(last.get(t) || 0, n.updated));
+  return [...last].sort((a, b) => b[1] - a[1]).map(([t]) => t);
+}
+
+// Every tag in one place: find, sort, pick several, or edit them
+const tagUi = { sort: 'az', q: '' };
+function tagBrowser(refresh) {
+  sheet({
+    title: 'Tags',
+    render(body, close) {
+      const draw = () => {
+        const counts = new Map(allTags());
+        const rank = new Map(recentTags().map((t, i) => [t, i]));
+        let tags = [...counts.keys()];
+        if (tagUi.q) tags = tags.filter(t => t.includes(normTag(tagUi.q.replace(/^#/, ''))));
+        tags.sort(tagUi.sort === 'az' ? (a, b) => a.localeCompare(b)
+          : tagUi.sort === 'count' ? (a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b)
+          : (a, b) => (rank.get(a) ?? 1e9) - (rank.get(b) ?? 1e9));
+        // A–Z shows nested tags (work/meetings) under their parent
+        const nested = t => tagUi.sort === 'az' && !tagUi.q && t.includes('/') && counts.has(t.slice(0, t.lastIndexOf('/')));
+        const shown = filterNotes().length;
+        body.innerHTML = `<label class="search-field">${icon('search')}<input type="search" data-tagq placeholder="Find a tag" value="${esc(tagUi.q)}" autocomplete="off" autocapitalize="off"></label>
+          <div class="row-between tag-tools"><div class="seg mini">${[['az', 'A–Z'], ['count', 'Most used'], ['recent', 'Recent']].map(([k, l]) => `<button class="${tagUi.sort === k ? 'on' : ''}" data-tagsort="${k}">${l}</button>`).join('')}</div>
+            <button class="link small" data-tagedit>${icon('edit')}Edit</button></div>
+          ${tags.length ? `<div class="card list-card tag-browser">${tags.map(t => { const on = ui.tags.includes(t); return `<button class="tag-row ${on ? 'on' : ''}" data-pick="${esc(t)}" style="--depth:${nested(t) ? t.split('/').length - 1 : 0}" aria-pressed="${on}">
+              <span class="tag-check">${on ? icon('check') : ''}</span><span class="grow">#${esc(nested(t) ? t.slice(t.lastIndexOf('/') + 1) : t)}</span><span class="muted small">${counts.get(t)}</span></button>`; }).join('')}</div>`
+            : '<p class="muted small">No tags match.</p>'}
+          ${ui.tags.length > 1 ? '<p class="muted small tag-hint">Showing notes that have all the picked tags.</p>' : ''}
+          <div class="feel-save row-between">${ui.tags.length ? '<button class="btn ghost" data-clear>Clear</button>' : '<span></span>'}<button class="btn primary" data-done>Show ${shown} note${shown === 1 ? '' : 's'}</button></div>`;
+      };
+      draw();
+      body.addEventListener('input', e => {
+        if (!e.target.matches('[data-tagq]')) return;
+        tagUi.q = e.target.value; draw();
+        const i = body.querySelector('[data-tagq]'); i.focus(); i.setSelectionRange(i.value.length, i.value.length);
+      });
+      body.addEventListener('click', e => {
+        const pk = e.target.closest('[data-pick]');
+        if (pk) { const t = pk.dataset.pick; ui.tags = ui.tags.includes(t) ? ui.tags.filter(x => x !== t) : [...ui.tags, t]; refresh(); draw(); return; }
+        const so = e.target.closest('[data-tagsort]');
+        if (so) { tagUi.sort = so.dataset.tagsort; draw(); return; }
+        if (e.target.closest('[data-clear]')) { ui.tags = []; refresh(); draw(); return; }
+        if (e.target.closest('[data-tagedit]')) { close(); manageTags(refresh); return; }
+        if (e.target.closest('[data-done]')) close();
+      });
+    },
+  });
 }
 
 export function manageTags(refresh) {
