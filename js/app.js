@@ -208,13 +208,21 @@ async function boot() {
   await showLock();
   resolve();
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-      reg.addEventListener('updatefound', () => {
-        const w = reg.installing;
-        w?.addEventListener('statechange', () => {
-          if (w.state === 'installed' && navigator.serviceWorker.controller) toast('A new version is ready', { action: 'Reload', onAction: () => location.reload(), ms: 10000 });
-        });
-      });
+    // Updates: check on launch, whenever the app comes back to the foreground, and every
+    // half hour. When a new version takes over, switch to it straight away unless you're
+    // in the middle of writing, in which case offer a Reload button that stays up.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloading) return;
+      const busy = document.body.classList.contains('in-editor') || document.querySelector('.sheet, dialog[open]') || document.activeElement?.matches?.('input, textarea, [contenteditable="true"]');
+      if (!busy) { reloading = true; location.reload(); return; }
+      toast('A new version is ready', { action: 'Reload', onAction: () => { reloading = true; location.reload(); }, ms: 1e9 });
+    });
+    navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+      const check = () => reg.update().catch(() => {});
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+      setInterval(check, 30 * 60_000);
     }).catch(() => {});
   }
 }

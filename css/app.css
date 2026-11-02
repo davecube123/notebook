@@ -984,3 +984,4 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .tag-row.on .grow { font-weight: 600; }
 .chip .ic { width: 14px; height: 14px; }
 .tag-hint { margin: 10px 2px 0; }
+.today-version { margin-top: 18px; }

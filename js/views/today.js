@@ -1,5 +1,6 @@
 // Today: the daily dashboard — one thing, anchors, quick logs, nudges, memories.
 import { list, settings } from '../db.js';
+import { APP_VERSION } from '../version.js';
 import { esc, today, ymd, fmtLongDay, greeting, addDays, relDays, fmtShort, parseDay } from '../util.js';
 import { icon } from '../icons.js';
 import { navigate, rerender } from '../router.js';
@@ -85,6 +86,7 @@ export function renderToday(main) {
         </div>` : ''}
 
         <blockquote class="daily-quote">“${esc(q[0])}”<cite>— ${esc(q[1])}</cite></blockquote>
+        <p class="app-version today-version">Almanac · Version ${APP_VERSION}</p>
       </div>
     </div>
   </div>`;
