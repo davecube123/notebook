@@ -6,7 +6,7 @@ import { icon } from '../icons.js';
 import { navigate, rerender } from '../router.js';
 import { oneThingCard, bindOneThing } from './onething.js';
 import { habitsCard, bindHabits } from './habits.js';
-import { trackers, trackerStats, trackTiles, bindTrackTiles } from './calendar.js';
+import { momentsOn, momentRow, bindMoments } from './moments.js';
 import { newNote, noteTitle } from './notes.js';
 import { openDaily, dailyNote } from './templates.js';
 import { nextBirthday, reconnectDue, avatar } from './people.js';
@@ -29,8 +29,7 @@ const QUOTES = [
 export function renderToday(main) {
   const t = today();
   const st = settings();
-  const ts = trackers();
-  const overdue = ts.filter(x => trackerStats(x).overdue);
+  const todays = momentsOn(t);
   const notes = list('notes').filter(n => !n.trashed && !n.draft);
   const recent = [...notes].sort((a, b) => b.updated - a.updated).slice(0, 4);
   const md = t.slice(5);
@@ -60,10 +59,9 @@ export function renderToday(main) {
       </div>
       <div class="col">
         <div class="card pad">
-          <div class="card-head"><h3>${icon('calendar')}Log today</h3><a class="link small" href="#/calendar">Calendar</a></div>
-          ${ts.length ? trackTiles(t)
-            : `<p class="muted small">Make trackers for things that happen regularly — sunsets, workouts, calls home — and log them with one tap.</p><a class="btn ghost sm" href="#/calendar">${icon('plus')}Create a tracker</a>`}
-          ${overdue.map(x => `<div class="nudge-line">${icon('bell')}It's been <b>${trackerStats(x).since} days</b> since ${esc(x.emoji)} ${esc(x.name)}.</div>`).join('')}
+          <div class="card-head"><h3>${icon('calendar')}Today’s moments</h3><a class="link small" href="#/calendar">Calendar</a></div>
+          ${todays.length ? `<div class="mo-list today-moments">${todays.map(momentRow).join('')}</div>` : ''}
+          <button class="mo-add" data-add-moment="${t}"><span class="mo-plus">${icon('plus')}</span>${todays.length ? 'Add another moment' : 'What happened today?'}</button>
         </div>
 
         ${bdays.length || reconnect.length ? `<div class="card pad">
@@ -95,7 +93,7 @@ export function renderToday(main) {
   bindOneThing(page);
   bindHabits(page);
   bindInstall(page, rerender);
-  bindTrackTiles(page);
+  bindMoments(page, rerender);
   bindFeelings(page);
   page.addEventListener('click', e => {
     const a = e.target.closest('[data-act]');

@@ -2,8 +2,8 @@
 // writes go to memory first (so the UI is instant) and are persisted async.
 
 const DB_NAME = 'almanac';
-const DB_VERSION = 2;
-export const STORES = ['notes', 'onething', 'trackers', 'events', 'people', 'habits', 'habitlogs', 'moods', 'meta'];
+const DB_VERSION = 3;
+export const STORES = ['notes', 'onething', 'trackers', 'events', 'people', 'habits', 'habitlogs', 'moods', 'moments', 'meta'];
 
 let dbp;
 function open() {

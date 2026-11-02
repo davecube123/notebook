@@ -8,6 +8,7 @@ import { renderToday } from './views/today.js';
 import { renderNotes, newNote, noteTitle } from './views/notes.js';
 import { renderOneThing } from './views/onething.js';
 import { renderCalendar } from './views/calendar.js';
+import { iconBadge } from './views/moments.js';
 import { renderPeople, avatar } from './views/people.js';
 import { renderHabits } from './views/habits.js';
 import { renderSettings } from './views/settings.js';
@@ -88,12 +89,10 @@ function openSearch() {
             .forEach(p => res.push({ k: 'Person', href: `#/people/${p.id}`, html: `${avatar(p, 'sm')}<div class="grow"><b>${highlight(p.name, q)}</b><div class="muted small">${esc(p.summary || p.circle || '')}</div></div>` }));
           list('onething').filter(o => o.text.toLowerCase().includes(q)).sort((a, b) => b.id.localeCompare(a.id)).slice(0, 4)
             .forEach(o => res.push({ k: 'One thing', href: `#/onething`, html: `${icon('target')}<div class="grow">${highlight(o.text, q)}<div class="muted small">${fmtDay(o.id)}${o.done ? ' · done' : ''}</div></div>` }));
-          const tmap = new Map(list('trackers').map(t => [t.id, t]));
-          list('trackers').filter(t => t.name.toLowerCase().includes(q)).forEach(t => res.push({ k: 'Tracker', href: '#/calendar', html: `<span class="ev-badge" style="--c:${t.color}">${esc(t.emoji)}</span><div class="grow">${highlight(t.name, q)}</div>` }));
           if (settings().showFeelings) moods().filter(m => (m.words.join(' ') + ' ' + (m.note || '')).toLowerCase().includes(q)).reverse().slice(0, 4)
             .forEach(m => res.push({ k: 'Feeling', href: '#/feel', html: `${icon('heart')}<div class="grow">${highlight(m.words.join(', '), q)}<div class="muted small">${fmtDay(m.date)}${m.note ? ' · ' + highlight(snippet(m.note, q, 60), q) : ''}</div></div>` }));
-          list('events').filter(e => e.note && e.note.toLowerCase().includes(q)).slice(0, 4)
-            .forEach(e => res.push({ k: 'Log', href: `#/calendar?day=${e.date}`, html: `${icon('calendar')}<div class="grow">${highlight(e.note, q)}<div class="muted small">${esc(tmap.get(e.trackerId)?.name || '')} · ${fmtDay(e.date)}</div></div>` }));
+          list('moments').filter(m => m.text.toLowerCase().includes(q)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
+            .forEach(m => res.push({ k: 'Moment', href: `#/calendar?day=${m.date}`, html: `${iconBadge(m.icon, 26)}<div class="grow">${highlight(m.text, q)}<div class="muted small">${fmtDay(m.date)}</div></div>` }));
           const NAVQ = [['today', 'Today'], ['notes', 'Notes'], ['onething', 'One Thing'], ['habits', 'Habits'], ['calendar', 'Calendar'], ['people', 'People'], ['settings', 'Settings']];
           NAVQ.filter(([, l]) => l.toLowerCase().startsWith(q)).forEach(([k, l]) => res.push({ k: 'Go to', href: `#/${k}`, html: `${icon('chevR')}<div class="grow">${l}</div>` }));
         }
@@ -163,6 +162,7 @@ async function boot() {
   try {
     await loadAll();
     (await import('./views/templates.js')).migrateTemplates();
+    (await import('./views/moments.js')).migrateTrackerLogs();
   } catch (err) {
     $('#main').innerHTML = `<div class="page"><div class="empty"><h3>Storage unavailable</h3><p>Your browser blocked local storage (private mode?). Almanac needs it to save your notes.</p></div></div>`;
     console.error(err); return;

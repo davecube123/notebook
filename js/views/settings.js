@@ -13,7 +13,7 @@ const ACCENTS = ['#007AFF', '#5856D6', '#AF52DE', '#FF2D55', '#FF3B30', '#FF9500
 
 export function renderSettings(main) {
   const st = settings();
-  const counts = { notes: list('notes').filter(n => !n.trashed).length, people: list('people').length, days: list('onething').length, events: list('events').length };
+  const counts = { notes: list('notes').filter(n => !n.trashed).length, people: list('people').length, days: list('onething').length, events: list('moments').length };
   main.innerHTML = `<div class="page settings-page">
     <header class="page-head"><div class="page-title-row"><h1>Settings</h1></div></header>
 
@@ -45,7 +45,7 @@ export function renderSettings(main) {
 
     <section class="section"><h3 class="group-label">Your data</h3>
       <div class="card list-card">
-        <div class="list-row"><span class="grow">${counts.notes} notes · ${counts.people} people · ${counts.days} one-things · ${counts.events} logs<div class="muted small storage-line">Checking storage…</div></span></div>
+        <div class="list-row"><span class="grow">${counts.notes} notes · ${counts.people} people · ${counts.days} one-things · ${counts.events} moments<div class="muted small storage-line">Checking storage…</div></span></div>
         <div class="list-row"><span class="grow">Back up<div class="muted small">Download everything as a single file. Do this now and then.${st.lastBackup ? ` Last: ${esc(st.lastBackup)}.` : ''}</div></span><button class="btn ghost sm" data-act="export">${icon('download')}Export</button></div>
         <label class="list-row"><span class="grow">Restore<div class="muted small">Merge a backup file into this device.</div></span><span class="btn ghost sm">${icon('upload')}Import<input type="file" accept="application/json,.json" hidden data-import></span></label>
         <div class="list-row"><span class="grow">Keep data safe<div class="muted small">Ask the browser not to clear storage when space is low.</div></span><button class="btn ghost sm" data-act="persist">Protect</button></div>

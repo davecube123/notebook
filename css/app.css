@@ -992,3 +992,43 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .tpl-actions .link .ic { width: 14px; height: 14px; }
 .tpl-head { margin-top: 4px; }
 .tpl-head .feel-label { margin-bottom: 8px; }
+
+/* Calendar of moments (calendar.js, moments.js) */
+.mcal-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mcal-head h1 { margin: 0; }
+.mcal-year { color: var(--muted); font-weight: 600; }
+.mcal-head .head-actions { display: flex; align-items: center; gap: 2px; }
+.mcal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center; font-size: 12px; font-weight: 600; color: var(--muted); margin: 6px 0 4px; }
+.mcal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 2px; touch-action: pan-y; }
+.mcal-cell { height: 56px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 4px; border-radius: 12px; color: var(--ink); min-width: 0; }
+.mcal-cell.out { opacity: .3; }
+.mcal-num { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 16px; font-weight: 500; }
+.mcal-cell.today .mcal-num { color: var(--accent); font-weight: 700; }
+.mcal-cell.sel .mcal-num { background: var(--accent); color: #fff; font-weight: 700; }
+.mcal-icons { display: flex; gap: 2px; height: 12px; }
+.mcal-day { display: flex; flex-direction: column; gap: 12px; padding-top: 14px; border-top: .5px solid var(--line); margin-top: 6px; }
+@media (min-width: 1100px) { .mcal-day { border-top: 0; margin-top: 0; padding-top: 0; } .mcal-page { max-width: 1100px; } }
+.mcal-day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.mcal-day-head h2 { margin: 0; font-size: 20px; font-weight: 700; }
+.mcal-empty { margin: 0 2px; }
+.mo-list { display: flex; flex-direction: column; padding: 0; }
+.mo-row { display: flex; align-items: center; gap: 12px; min-height: 54px; padding: 8px 14px; width: 100%; text-align: left; color: var(--ink); border-top: .5px solid var(--line); }
+.mo-row:first-child { border-top: 0; }
+.today-moments .mo-row { padding-left: 0; padding-right: 0; }
+.mo-text { flex: 1; min-width: 0; font-size: 16px; line-height: 1.3; overflow-wrap: anywhere; }
+.mo-time { font-size: 13px; color: var(--muted); flex: none; }
+.mo-badge { border-radius: 50%; display: grid; place-items: center; flex: none; background: color-mix(in srgb, var(--c) 18%, transparent); }
+.mo-add { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 0 14px; border-radius: 14px; background: var(--surface); color: var(--muted); font-size: 16px; text-align: left; }
+.card .mo-add { background: var(--fill-2); margin-top: 6px; }
+.mo-plus { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: #fff; display: grid; place-items: center; flex: none; }
+.mo-plus .ic { width: 18px; height: 18px; stroke-width: 2.4; }
+/* add / edit sheet */
+.mo-date { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 12px; border-radius: 18px; background: var(--fill); color: var(--accent); }
+.mo-date input { border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 15px; }
+.mo-input { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 0 14px; border-radius: 14px; background: var(--fill); }
+.mo-input input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 17px; outline: none; }
+.mo-hint { margin: -4px 2px 0; }
+.mo-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.mo-pick { height: 68px; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; font-size: 12px; font-weight: 500; color: var(--ink-2); background: var(--fill-2); border: 2px solid transparent; min-width: 0; }
+.mo-pick span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+.mo-pick.on { background: color-mix(in srgb, var(--c) 18%, transparent); border-color: var(--c); }
