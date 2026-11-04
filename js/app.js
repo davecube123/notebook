@@ -176,6 +176,7 @@ async function boot() {
   route('/notes/:id', renderNotes, { name: 'note' });
   route('/onething', renderOneThing, { name: 'onething' });
   route('/habits', renderHabits, { name: 'habits' });
+  route('/habits/:id', renderHabits, { name: 'habit' });
   route('/calendar', renderCalendar, { name: 'calendar' });
   route('/people', renderPeople, { name: 'people' });
   route('/people/:id', renderPeople, { name: 'person' });
