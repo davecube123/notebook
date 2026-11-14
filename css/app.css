@@ -1240,6 +1240,3 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .hs-times .btn { width: 44px; font-size: 20px; }
 .hs-switches .list-row .grow { display: flex; flex-direction: column; gap: 2px; }
 .ht-one .habit-emoji .ic { width: 20px; height: 20px; color: var(--accent); }
-.ht-one-empty { display: flex; align-items: center; gap: 10px; padding: 14px; color: var(--accent); font-size: 15px; }
-.ht-one-empty .ic { width: 18px; height: 18px; flex: none; }
-.ht-one-empty .ic:last-child { margin-left: auto; color: var(--faint); }

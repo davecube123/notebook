@@ -234,25 +234,25 @@ function habitRow(h, st, day) {
     <span class="ht-text"><span class="ht-name">${esc(h.name)}</span>${sub ? `<span class="ht-sub ${urgent ? 'urgent' : st.met ? 'met' : ''}">${sub}</span>` : ''}</span>${dots}</button>`;
 }
 
-function oneThingHTML(day) {
-  const o = oneOf(day);
-  if (!o) return day === today() ? `<section class="ht-group"><div class="ht-label"><span>The one thing</span></div>
-    <a class="card ht-one-empty" href="#/onething">${icon('target')}<span>Write today’s one thing and it joins this list</span>${icon('chevR')}</a></section>` : '';
-  return `<section class="ht-group"><div class="ht-label"><span>The one thing</span><span>${o.done ? 'done' : 'counts toward the win'}</span></div>
-    <div class="card list-card"><button class="ht-row ht-one ${o.done ? 'on' : ''}" data-habit-one="${day}" role="checkbox" aria-checked="${!!o.done}">
-      <span class="check-circle">${icon('check')}</span><span class="habit-emoji">${icon('target')}</span>
-      <span class="ht-text"><span class="ht-name">${esc(o.text)}</span><span class="ht-sub">${o.done ? 'Done. That was the one' : 'If only this gets done, the day counts'}</span></span></button></div></section>`;
+// The day's One Thing as the first "Every day" row, once it's written
+function oneThingRow(o, day) {
+  return `<button class="ht-row ht-one ${o.done ? 'on' : ''}" data-habit-one="${day}" role="checkbox" aria-checked="${!!o.done}">
+    <span class="check-circle">${icon('check')}</span><span class="habit-emoji">${icon('target')}</span>
+    <span class="ht-text"><span class="ht-name">${esc(o.text)}</span><span class="ht-sub">The one thing</span></span></button>`;
 }
 
 function todayListHTML(day = today()) {
   const hs = day === today() ? activeHabits() : habitsOn(day);
   const states = hs.map(h => [h, habitState(h, day)]);
-  const groups = oneThingHTML(day) + GROUPS.map(([r, label]) => {
+  const one = oneOf(day);
+  const groups = GROUPS.map(([r, label]) => {
     const rows = states.filter(([h, st]) => st.r === r && st.due);
-    if (!rows.length) return '';
-    const [meta, urgent] = r === 'daily' ? [`${rows.filter(([, st]) => st.doneToday).length} of ${rows.length}`, false] : groupMeta(rows[0][1]);
+    const withOne = r === 'daily' && one;
+    if (!rows.length && !withOne) return '';
+    const n = rows.length + (withOne ? 1 : 0), nDone = rows.filter(([, st]) => st.doneToday).length + (withOne && one.done ? 1 : 0);
+    const [meta, urgent] = r === 'daily' ? [`${nDone} of ${n}`, false] : groupMeta(rows[0][1]);
     return `<section class="ht-group"><div class="ht-label"><span>${label}</span><span class="${urgent ? 'urgent' : ''}">${meta}</span></div>
-      <div class="card list-card">${rows.map(([h, st]) => habitRow(h, st, day)).join('')}</div></section>`;
+      <div class="card list-card">${withOne ? oneThingRow(one, day) : ''}${rows.map(([h, st]) => habitRow(h, st, day)).join('')}</div></section>`;
   }).join('');
   const rested = states.filter(([, st]) => st.restedBefore && !st.due);
   return groups + (rested.length ? `<p class="ht-rested">${icon('check')}<span>Done for now: ${rested.map(([h, st]) => `<b>${esc(h.name)}</b> <span class="faint">(${PERIOD[st.r]})</span>`).join(', ')}</span></p>` : '');
