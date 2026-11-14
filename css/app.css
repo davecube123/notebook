@@ -1240,3 +1240,6 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .hs-times .btn { width: 44px; font-size: 20px; }
 .hs-switches .list-row .grow { display: flex; flex-direction: column; gap: 2px; }
 .ht-one .habit-emoji .ic { width: 20px; height: 20px; color: var(--accent); }
+.ht-one.empty .check-circle { border-style: dashed; }
+.ht-one.empty .ht-name { color: var(--muted); }
+.ht-one.empty .habit-emoji .ic { color: var(--faint); }

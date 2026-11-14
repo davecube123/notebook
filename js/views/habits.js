@@ -72,14 +72,16 @@ export const winTarget = () => settings().winTarget || 5;
 // The day's One Thing, once written, is a daily habit of its own: it shows in the
 // list and counts toward winning the day.
 const oneOf = day => { const o = getOne(day); return o && o.text?.trim() ? o : null; };
+// today it always has a place (it can't be ticked until it's written); past days only if written
+const oneSlot = day => day === today() || !!oneOf(day);
 
 export function dayScore(day) {
   const due = habitsOn(day).filter(h => habitState(h, day).due);
   const counting = due.filter(h => h.countsToWin !== false);
-  const one = oneOf(day);
-  const nCount = counting.length + (one ? 1 : 0), nDue = due.length + (one ? 1 : 0);
+  const one = oneOf(day), slot = oneSlot(day) ? 1 : 0;
+  const nCount = counting.length + slot, nDue = due.length + slot;
   const done = counting.filter(h => doneOn(h, day)).length + (one?.done ? 1 : 0);
-  const allDone = due.every(h => doneOn(h, day)) && (!one || one.done);
+  const allDone = due.every(h => doneOn(h, day)) && (!slot || !!one?.done);
   const target = Math.max(1, Math.min(winTarget(), nCount));
   return {
     done, target, due: nDue,
@@ -115,8 +117,8 @@ function celebrate(day, was, el) {
 
 export function toggleOneThing(day, el) {
   const was = dayScore(day);
-  const o = getOne(day);
-  if (!o) return;
+  const o = oneOf(day);
+  if (!o) { toast('Write today’s One Thing first', { action: 'Write', onAction: () => navigate('#/onething') }); return; }
   if (o.done) { save('onething', { ...o, done: false, doneAt: null }); haptic(8); return; }
   if (!celebrateLater(day, was, el)) toggleOne(day, el);
 }
@@ -236,6 +238,9 @@ function habitRow(h, st, day) {
 
 // The day's One Thing as the first "Every day" row, once it's written
 function oneThingRow(o, day) {
+  if (!o) return `<button class="ht-row ht-one empty" data-habit-one="${day}" aria-disabled="true" aria-label="The one thing: not written yet">
+    <span class="check-circle"></span><span class="habit-emoji">${icon('target')}</span>
+    <span class="ht-text"><span class="ht-name">The one thing</span><span class="ht-sub">Not written yet</span></span></button>`;
   return `<button class="ht-row ht-one ${o.done ? 'on' : ''}" data-habit-one="${day}" role="checkbox" aria-checked="${!!o.done}">
     <span class="check-circle">${icon('check')}</span><span class="habit-emoji">${icon('target')}</span>
     <span class="ht-text"><span class="ht-name">${esc(o.text)}</span><span class="ht-sub">The one thing</span></span></button>`;
@@ -247,9 +252,9 @@ function todayListHTML(day = today()) {
   const one = oneOf(day);
   const groups = GROUPS.map(([r, label]) => {
     const rows = states.filter(([h, st]) => st.r === r && st.due);
-    const withOne = r === 'daily' && one;
+    const withOne = r === 'daily' && oneSlot(day);
     if (!rows.length && !withOne) return '';
-    const n = rows.length + (withOne ? 1 : 0), nDone = rows.filter(([, st]) => st.doneToday).length + (withOne && one.done ? 1 : 0);
+    const n = rows.length + (withOne ? 1 : 0), nDone = rows.filter(([, st]) => st.doneToday).length + (withOne && one?.done ? 1 : 0);
     const [meta, urgent] = r === 'daily' ? [`${nDone} of ${n}`, false] : groupMeta(rows[0][1]);
     return `<section class="ht-group"><div class="ht-label"><span>${label}</span><span class="${urgent ? 'urgent' : ''}">${meta}</span></div>
       <div class="card list-card">${withOne ? oneThingRow(one, day) : ''}${rows.map(([h, st]) => habitRow(h, st, day)).join('')}</div></section>`;
