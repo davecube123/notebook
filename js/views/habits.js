@@ -8,6 +8,7 @@ import { icon } from '../icons.js';
 import { rerender, navigate } from '../router.js';
 import { sheet, toast, confetti, confirmDialog, emojiPicker, menu } from '../ui.js';
 import { heatmap } from './heatmap.js';
+import { getOne, toggleOne } from './onething.js';
 
 const dayOf = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
@@ -68,16 +69,23 @@ export function habitState(h, day = today()) {
 
 // ---------- winning the day ----------
 export const winTarget = () => settings().winTarget || 5;
+// The day's One Thing, once written, is a daily habit of its own: it shows in the
+// list and counts toward winning the day.
+const oneOf = day => { const o = getOne(day); return o && o.text?.trim() ? o : null; };
+
 export function dayScore(day) {
   const due = habitsOn(day).filter(h => habitState(h, day).due);
   const counting = due.filter(h => h.countsToWin !== false);
-  const done = counting.filter(h => doneOn(h, day)).length;
-  const target = Math.max(1, Math.min(winTarget(), counting.length));
+  const one = oneOf(day);
+  const nCount = counting.length + (one ? 1 : 0), nDue = due.length + (one ? 1 : 0);
+  const done = counting.filter(h => doneOn(h, day)).length + (one?.done ? 1 : 0);
+  const allDone = due.every(h => doneOn(h, day)) && (!one || one.done);
+  const target = Math.max(1, Math.min(winTarget(), nCount));
   return {
-    done, target, due: due.length,
-    won: counting.length > 0 && done >= target,
-    perfect: due.length > 0 && due.every(h => doneOn(h, day)),
-    showedUp: due.some(h => doneOn(h, day)),
+    done, target, due: nDue,
+    won: nCount > 0 && done >= target,
+    perfect: nDue > 0 && allDone,
+    showedUp: due.some(h => doneOn(h, day)) || !!one?.done,
   };
 }
 // kept for other views: every habit due that day was done
@@ -93,6 +101,34 @@ export function habitStats() {
   return { streak, best: Math.max(best, streak), wonTotal: won };
 }
 
+// After a change: celebrate a newly won or perfect day. Returns true if it did.
+function celebrate(day, was, el) {
+  const now = dayScore(day);
+  if (!was.won && now.won) {
+    haptic([15, 50, 25]); confetti(el);
+    if (day === today()) winSheet(); else toast(`${fmtDay(day)} is now a won day`);
+    return true;
+  }
+  if (!was.perfect && now.perfect) { confetti(el); toast(day === today() ? 'Perfect day: everything due is done' : `${fmtDay(day)} is now a perfect day`); return true; }
+  return false;
+}
+
+export function toggleOneThing(day, el) {
+  const was = dayScore(day);
+  const o = getOne(day);
+  if (!o) return;
+  if (o.done) { save('onething', { ...o, done: false, doneAt: null }); haptic(8); return; }
+  if (!celebrateLater(day, was, el)) toggleOne(day, el);
+}
+// tick the one thing quietly when the win sheet will celebrate it anyway
+function celebrateLater(day, was, el) {
+  const o = getOne(day);
+  save('onething', { ...o, done: true, doneAt: Date.now() });
+  if (celebrate(day, was, el)) return true;
+  save('onething', o); // nothing new to celebrate: let the One Thing's own moment play
+  return false;
+}
+
 export function toggleHabit(day, hid, el) {
   const h = get('habits', hid);
   const was = dayScore(day), wasMet = h && habitState(h, day).met;
@@ -100,13 +136,9 @@ export function toggleHabit(day, hid, el) {
   const done = log.done.includes(hid) ? log.done.filter(x => x !== hid) : [...log.done, hid];
   save('habitlogs', { ...log, done, updated: Date.now() });
   haptic(8);
+  if (celebrate(day, was, el)) return;
   const now = dayScore(day);
-  if (!was.won && now.won) {
-    haptic([15, 50, 25]); confetti(el);
-    if (day === today()) winSheet(); else toast(`${fmtDay(day)} is now a won day`);
-  } else if (!was.perfect && now.perfect) {
-    confetti(el); toast(day === today() ? 'Perfect day: everything due is done' : `${fmtDay(day)} is now a perfect day`);
-  } else if (h && rhythmOf(h) !== 'daily' && !wasMet && habitState(h, day).met) {
+  if (h && rhythmOf(h) !== 'daily' && !wasMet && habitState(h, day).met) {
     haptic([10, 40, 10]);
     toast(`${h.name}: done for the ${PERIOD[rhythmOf(h)]} ✓`);
   }
@@ -202,10 +234,20 @@ function habitRow(h, st, day) {
     <span class="ht-text"><span class="ht-name">${esc(h.name)}</span>${sub ? `<span class="ht-sub ${urgent ? 'urgent' : st.met ? 'met' : ''}">${sub}</span>` : ''}</span>${dots}</button>`;
 }
 
+function oneThingHTML(day) {
+  const o = oneOf(day);
+  if (!o) return day === today() ? `<section class="ht-group"><div class="ht-label"><span>The one thing</span></div>
+    <a class="card ht-one-empty" href="#/onething">${icon('target')}<span>Write today’s one thing and it joins this list</span>${icon('chevR')}</a></section>` : '';
+  return `<section class="ht-group"><div class="ht-label"><span>The one thing</span><span>${o.done ? 'done' : 'counts toward the win'}</span></div>
+    <div class="card list-card"><button class="ht-row ht-one ${o.done ? 'on' : ''}" data-habit-one="${day}" role="checkbox" aria-checked="${!!o.done}">
+      <span class="check-circle">${icon('check')}</span><span class="habit-emoji">${icon('target')}</span>
+      <span class="ht-text"><span class="ht-name">${esc(o.text)}</span><span class="ht-sub">${o.done ? 'Done. That was the one' : 'If only this gets done, the day counts'}</span></span></button></div></section>`;
+}
+
 function todayListHTML(day = today()) {
   const hs = day === today() ? activeHabits() : habitsOn(day);
   const states = hs.map(h => [h, habitState(h, day)]);
-  const groups = GROUPS.map(([r, label]) => {
+  const groups = oneThingHTML(day) + GROUPS.map(([r, label]) => {
     const rows = states.filter(([h, st]) => st.r === r && st.due);
     if (!rows.length) return '';
     const [meta, urgent] = r === 'daily' ? [`${rows.filter(([, st]) => st.doneToday).length} of ${rows.length}`, false] : groupMeta(rows[0][1]);
@@ -235,6 +277,8 @@ export function bindHabits(root, after = rerender) {
   root.addEventListener('click', e => {
     const t = e.target.closest('[data-habit-toggle]');
     if (t) { toggleHabit(t.dataset.day, t.dataset.habitToggle, t); after(); return; }
+    const o = e.target.closest('[data-habit-one]');
+    if (o) { toggleOneThing(o.dataset.habitOne, o); after(); return; }
     if (e.target.closest('[data-habit-new]')) habitSheet(null, after);
     if (e.target.closest('[data-win-target]')) winTargetSheet(after);
   });
@@ -388,7 +432,10 @@ export function dayHabitsSheet(day) {
     render(body) {
       const draw = () => { body.innerHTML = habitsOn(day).length ? habitsCard(day, { showHeader: false }) : '<p class="muted">No habits existed on this day.</p>'; };
       draw();
-      body.addEventListener('click', e => { const t = e.target.closest('[data-habit-toggle]'); if (t) { toggleHabit(day, t.dataset.habitToggle, t); draw(); } });
+      body.addEventListener('click', e => {
+        const t = e.target.closest('[data-habit-toggle]'); if (t) { toggleHabit(day, t.dataset.habitToggle, t); draw(); }
+        const o = e.target.closest('[data-habit-one]'); if (o) { toggleOneThing(day, o); draw(); }
+      });
     },
   });
 }
