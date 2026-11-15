@@ -82,10 +82,13 @@ export function dayScore(day) {
   const nCount = counting.length + slot, nDue = due.length + slot;
   const done = counting.filter(h => doneOn(h, day)).length + (one?.done ? 1 : 0);
   const allDone = due.every(h => doneOn(h, day)) && (!slot || !!one?.done);
-  const target = Math.max(1, Math.min(winTarget(), nCount));
+  // winning takes every daily habit (and the One Thing), plus enough checks to reach the target
+  const dailies = counting.filter(h => rhythmOf(h) === 'daily');
+  const dailyTotal = dailies.length + slot, dailyDone = dailies.filter(h => doneOn(h, day)).length + (one?.done ? 1 : 0);
+  const target = Math.max(1, dailyTotal, Math.min(winTarget(), nCount));
   return {
-    done, target, due: nDue,
-    won: nCount > 0 && done >= target,
+    done, target, due: nDue, dailyLeft: dailyTotal - dailyDone,
+    won: nCount > 0 && done >= target && dailyDone === dailyTotal,
     perfect: nDue > 0 && allDone,
     showedUp: due.some(h => doneOn(h, day)) || !!one?.done,
   };
@@ -201,12 +204,14 @@ function ring(done, target, size = 76) {
 
 function winCard(day = today(), { compact = false } = {}) {
   const sc = dayScore(day), s = day === today() ? habitStats() : null;
-  const head = sc.won ? (sc.perfect ? 'Perfect day' : 'Day won') : `${sc.target - sc.done} more to win the day`;
+  const head = sc.won ? (sc.perfect ? 'Perfect day' : 'Day won')
+    : sc.done >= sc.target ? `Finish ${sc.dailyLeft} daily habit${sc.dailyLeft === 1 ? '' : 's'} to win`
+    : `${sc.target - sc.done} more to win the day`;
   return `<div class="win-card ${sc.won ? 'won' : ''} ${compact ? 'compact' : ''}">
     ${ring(sc.done, sc.target, compact ? 60 : 76)}
     <div class="win-text">
       <b class="win-head">${head}</b>
-      <div class="win-tiers"><span class="${sc.showedUp ? 'on' : ''}">Showed up</span><span class="${sc.won ? 'on gold' : ''}">Win at ${sc.target}</span><span class="${sc.perfect ? 'on' : ''}">Perfect ${sc.due}</span></div>
+      <div class="win-tiers"><span class="${sc.showedUp ? 'on' : ''}">Showed up</span><span class="${sc.dailyLeft === 0 ? 'on' : ''}">All daily</span><span class="${sc.won ? 'on gold' : ''}">Win at ${sc.target}</span><span class="${sc.perfect ? 'on' : ''}">Perfect ${sc.due}</span></div>
       ${s ? `<span class="win-streak ${s.streak ? 'lit' : ''}">${icon('flame')}${s.streak ? `${plural(s.streak, 'day')} won in a row` : 'Win today to start a streak'}</span>` : ''}
     </div>
     ${compact ? '' : '<button class="link small win-edit" data-win-target aria-label="Change how many checks win the day">Change</button>'}
@@ -228,7 +233,7 @@ function groupMeta(st) {
 function habitRow(h, st, day) {
   const sub = st.r === 'daily' ? esc(h.cue || '')
     : st.met ? `Done for the ${PERIOD[st.r]} ✓`
-    : `${st.remaining} more by ${untilLabel(st)}`;
+    : st.daysLeft <= 1 ? `${st.remaining} more today` : `${st.remaining} more by ${untilLabel(st)}`;
   const urgent = st.r !== 'daily' && !st.met && st.remaining >= st.daysLeft;
   const dots = st.r === 'daily' ? '' : `<span class="ht-dots" aria-hidden="true">${Array.from({ length: Math.min(st.target, 7) }, (_, i) => `<i class="${i < st.count ? 'on' : ''}"></i>`).join('')}</span>`;
   return `<button class="ht-row ${st.doneToday ? 'on' : ''}" data-habit-toggle="${h.id}" data-day="${day}" role="checkbox" aria-checked="${st.doneToday}">
@@ -315,9 +320,9 @@ function winTargetSheet(after = rerender) {
     render(body, close) {
       let n = winTarget();
       const draw = () => {
-        body.innerHTML = `<p class="muted">How many habits do you need to check to call a day won? Pick a number you can hit on a normal day, not only on your best one.</p>
+        body.innerHTML = `<p class="muted">A day is won when every daily habit is checked, including your One Thing, and the day reaches this many checks in all. Weekly, monthly and quarterly habits help make up the rest.</p>
           <div class="win-stepper"><button class="btn ghost" data-step="-1" aria-label="Fewer">−</button><b>${n}</b><button class="btn ghost" data-step="1" aria-label="More">+</button></div>
-          <p class="muted small">On days with fewer habits due, winning takes all of them.</p>
+          <p class="muted small">If your daily habits alone add up to more, they set the number.</p>
           <div class="row-end"><button class="btn ghost" data-cancel>Cancel</button><button class="btn primary" data-save>Save</button></div>`;
       };
       draw();
