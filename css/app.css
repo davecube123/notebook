@@ -1243,3 +1243,17 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .ht-one.empty .check-circle { border-style: dashed; }
 .ht-one.empty .ht-name { color: var(--muted); }
 .ht-one.empty .habit-emoji .ic { color: var(--faint); }
+
+/* Today's note card (todaynote.js) */
+.today-note { display: flex; flex-direction: column; gap: 10px; }
+.today-note .card-head { margin-bottom: 0; }
+.tn-template { height: 30px; font-size: 13px; max-width: 55%; overflow: hidden; }
+.tn-template .ic { width: 14px; height: 14px; flex: none; }
+.tn-sections { display: flex; flex-direction: column; }
+.tn-sec { display: flex; flex-direction: column; gap: 2px; width: 100%; padding: 9px 0; text-align: left; color: var(--ink); border-top: .5px solid var(--line); }
+.tn-sec:first-child { border-top: 0; }
+.tn-h { font-size: 13px; font-weight: 600; color: var(--muted); }
+.tn-v { font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; }
+.tn-open { align-self: flex-start; display: inline-flex; align-items: center; gap: 2px; }
+.tn-open .ic { width: 14px; height: 14px; }
+.tn-v span { display: block; }

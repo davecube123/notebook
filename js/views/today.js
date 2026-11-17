@@ -1,14 +1,13 @@
-// Today: the daily dashboard — one thing, anchors, quick logs, nudges, memories.
+// Today: the daily dashboard: one thing, habits, moments, people nudges and today's note.
 import { list, settings } from '../db.js';
 import { APP_VERSION } from '../version.js';
-import { esc, today, ymd, fmtLongDay, greeting, addDays, relDays, fmtShort, parseDay } from '../util.js';
+import { esc, today, fmtLongDay, greeting, parseDay } from '../util.js';
 import { icon } from '../icons.js';
 import { navigate, rerender } from '../router.js';
 import { oneThingCard, bindOneThing } from './onething.js';
 import { habitsCard, bindHabits } from './habits.js';
 import { momentsOn, momentRow, bindMoments } from './moments.js';
-import { newNote, noteTitle } from './notes.js';
-import { openDaily, dailyNote } from './templates.js';
+import { todayNoteCard, bindTodayNote } from './todaynote.js';
 import { nextBirthday, reconnectDue, avatar } from './people.js';
 import { installCard, bindInstall } from '../install.js';
 import { feelingsCard, bindFeelings } from './feelings.js';
@@ -30,16 +29,9 @@ export function renderToday(main) {
   const t = today();
   const st = settings();
   const todays = momentsOn(t);
-  const notes = list('notes').filter(n => !n.trashed && !n.draft);
-  const recent = [...notes].sort((a, b) => b.updated - a.updated).slice(0, 4);
-  const md = t.slice(5);
-  const memories = notes.filter(n => { const d = ymd(new Date(n.created)); return d.slice(5) === md && d < t; })
-    .concat(notes.filter(n => { const d = ymd(new Date(n.created)); return d === addDays(t, -7) || d === addDays(t, -30); }))
-    .slice(0, 3);
   const people = list('people');
   const bdays = people.map(p => ({ p, b: nextBirthday(p) })).filter(x => x.b && x.b.inDays <= 7).sort((a, b) => a.b.inDays - b.b.inDays);
   const reconnect = people.filter(reconnectDue).slice(0, 3);
-  const openTodos = notes.filter(n => n.todo && n.todo.total > n.todo.done && !n.archived).slice(0, 3);
   const q = QUOTES[Math.floor(parseDay(t) / 864e5) % QUOTES.length];
 
   main.innerHTML = `<div class="page today-page">
@@ -70,18 +62,7 @@ export function renderToday(main) {
           ${reconnect.map(p => `<a class="mini-row" href="#/people/${p.id}">${avatar(p, 'sm')}<span>Reach out to <b>${esc(p.name)}</b></span></a>`).join('')}
         </div>` : ''}
 
-        <div class="card pad">
-          <div class="card-head"><h3>${icon('notes')}Notes</h3><button class="link small" data-act="newnote">${icon('plus')}New</button></div>
-          <button class="mini-row daily-row" data-act="daily">${icon('today')}<span>${dailyNote() ? '<b>Today’s note</b>' : 'Start <b>today’s note</b>'}</span><span class="muted small">${dailyNote() ? 'continue' : 'plan · reflect'}</span></button>
-          <form class="capture" data-capture><input class="input" name="q" placeholder="Quick capture… (add #tags)" autocomplete="off" enterkeyhint="done"><button class="icon-btn accent" aria-label="Save">${icon('plus')}</button></form>
-          ${openTodos.map(n => `<a class="mini-row" href="#/notes/${n.id}">${icon('checklist')}<span>${esc(noteTitle(n))} <span class="muted small">${n.todo.done}/${n.todo.total}</span></span></a>`).join('')}
-          ${recent.map(n => `<a class="mini-row" href="#/notes/${n.id}">${icon('notes')}<span class="ellipsis">${esc(noteTitle(n))}</span><time class="muted small">${fmtShort(n.updated)}</time></a>`).join('') || '<p class="muted small">No notes yet.</p>'}
-        </div>
-
-        ${memories.length ? `<div class="card pad memory">
-          <div class="card-head"><h3>${icon('history')}On this day</h3></div>
-          ${memories.map(n => `<a class="mini-row" href="#/notes/${n.id}"><span><b>${esc(noteTitle(n))}</b> <span class="muted small">· ${relDays(ymd(new Date(n.created)))}</span></span></a>`).join('')}
-        </div>` : ''}
+        ${todayNoteCard()}
 
         <blockquote class="daily-quote">“${esc(q[0])}”<cite>— ${esc(q[1])}</cite></blockquote>
         <p class="app-version today-version">Almanac · Version ${APP_VERSION}</p>
@@ -98,18 +79,7 @@ export function renderToday(main) {
   page.addEventListener('click', e => {
     const a = e.target.closest('[data-act]');
     if (!a) return;
-    if (a.dataset.act === 'newnote') { const n = newNote(); navigate(`#/notes/${n.id}`); }
-    if (a.dataset.act === 'daily') openDaily();
     if (a.dataset.act === 'search') document.dispatchEvent(new CustomEvent('open-search'));
   });
-  page.addEventListener('submit', e => {
-    const f = e.target.closest('[data-capture]');
-    if (!f) return;
-    e.preventDefault();
-    const raw = f.q.value.trim(); if (!raw) return;
-    const tags = [...raw.matchAll(/#([\w/-]+)/g)].map(m => m[1].toLowerCase());
-    const text = raw.replace(/#[\w/-]+/g, '').replace(/\s+/g, ' ').trim();
-    const n = newNote({ tags, title: '', html: `<p>${esc(text)}</p>`, text, draft: false });
-    import('../db.js').then(({ save }) => { save('notes', n); import('../ui.js').then(u => u.toast('Captured', { action: 'Open', onAction: () => navigate(`#/notes/${n.id}`) })); rerender(); });
-  });
+  bindTodayNote(page, rerender);
 }

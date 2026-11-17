@@ -157,13 +157,21 @@ export function noteFromTemplate(id, { date = today(), extra = {} } = {}) {
 // ---------- daily note ----------
 export const dailyNote = (date = today()) => list('notes').find(n => n.daily === date && !n.trashed) || null;
 
-export function openDaily(date = today(), { replace = false } = {}) {
+export const dailyTemplateId = () => (findTemplate(settings().dailyTemplate) ? settings().dailyTemplate : 'daily');
+
+// Today's (or a date's) daily note, made from the chosen template if it doesn't exist yet
+export function ensureDaily(date = today()) {
   const existing = dailyNote(date);
-  if (existing) { navigate(`#/notes/${existing.id}`, { replace }); return existing; }
-  const tplId = findTemplate(settings().dailyTemplate) ? settings().dailyTemplate : 'daily';
-  const n = noteFromTemplate(tplId, { date, extra: { daily: date } });
+  if (existing) return existing;
+  const n = noteFromTemplate(dailyTemplateId(), { date, extra: { daily: date } });
   // the daily note always carries #daily and the date as its title
-  save('notes', { ...n, title: fmtLongDay(date), tags: [...new Set(['daily', ...n.tags])] }, { silent: true });
+  const out = { ...n, title: fmtLongDay(date), tags: [...new Set(['daily', ...n.tags])] };
+  save('notes', out, { silent: true });
+  return out;
+}
+
+export function openDaily(date = today(), { replace = false } = {}) {
+  const n = ensureDaily(date);
   navigate(`#/notes/${n.id}`, { replace });
   return n;
 }

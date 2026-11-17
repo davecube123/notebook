@@ -305,6 +305,10 @@ function countTodos(editor) {
 }
 
 // ---------- main ----------
+// Set before navigating to a note to start the caret in its nth section (h2/h3)
+let openAtSection = null;
+export const openNoteAtSection = i => { openAtSection = i; };
+
 export function renderEditor(container, id, { embedded = false, onChange } = {}) {
   let note = get('notes', id);
   container.innerHTML = `
@@ -591,7 +595,20 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
   }
 
   // Focus: new notes start straight in the body (the first line names the note), existing ones stay put
-  if ((!note.title && !note.text || note.seeded && note.draft) && !note.trashed) setTimeout(() => {
+  // opened from a section of today's note: start at the end of that section
+  if (openAtSection !== null && !note.trashed) {
+    const i = openAtSection; openAtSection = null;
+    setTimeout(() => {
+      const h = body.querySelectorAll('h2, h3')[i];
+      if (!h) return;
+      let last = h, n = h.nextElementSibling;
+      while (n && !/^H[1-3]$/.test(n.tagName)) { last = n; n = n.nextElementSibling; }
+      if (last === h) { const p = document.createElement('p'); p.innerHTML = '<br>'; h.after(p); last = p; }
+      const target = /^(UL|OL)$/.test(last.tagName) ? last.lastElementChild || last : last;
+      body.focus(); placeCaretIn(target, true);
+      target.scrollIntoView({ block: 'center' });
+    }, 60);
+  } else if ((!note.title && !note.text || note.seeded && note.draft) && !note.trashed) setTimeout(() => {
     body.focus();
     // templates: start in the first empty line under the first prompt
     const gap = note.seeded && [...body.querySelectorAll('p, li')].find(el => !el.textContent.trim() && !el.querySelector('.mention'));
