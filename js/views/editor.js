@@ -5,6 +5,7 @@ import { icon } from '../icons.js';
 import { navigate, onLeave } from '../router.js';
 import { menu, toast, promptDialog, confirmDialog, sheet } from '../ui.js';
 import { attachMentions, personLine } from './mentions.js';
+import { noteSections } from './sections.js';
 import { templateSheet, saveAsTemplate, openDaily, noteFromTemplate } from './templates.js';
 import { addDays, fmtDay, today as todayKey } from '../util.js';
 
@@ -599,14 +600,18 @@ export function renderEditor(container, id, { embedded = false, onChange } = {})
   if (openAtSection !== null && !note.trashed) {
     const i = openAtSection; openAtSection = null;
     setTimeout(() => {
-      const h = body.querySelectorAll('h2, h3')[i];
-      if (!h) return;
-      let last = h, n = h.nextElementSibling;
-      while (n && !/^H[1-3]$/.test(n.tagName)) { last = n; n = n.nextElementSibling; }
-      if (last === h) { const p = document.createElement('p'); p.innerHTML = '<br>'; h.after(p); last = p; }
-      const target = /^(UL|OL)$/.test(last.tagName) ? last.lastElementChild || last : last;
-      body.focus(); placeCaretIn(target, true);
-      target.scrollIntoView({ block: 'center' });
+      const sec = noteSections(body)[i];
+      if (!sec) return;
+      let { el: target, br } = sec.last;
+      if (sec.last === sec.head && !sec.lines.length) {
+        // nothing under the prompt yet: open a line for it
+        if (br) { const nb = document.createElement('br'); br.after(nb); br = nb; }
+        else { const p = document.createElement('p'); p.innerHTML = '<br>'; sec.head.el.after(p); target = p; br = null; }
+      }
+      body.focus();
+      if (br) { const r = document.createRange(); r.setStartBefore(br); r.collapse(true); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+      else placeCaretIn(target, true);
+      target.scrollIntoView?.({ block: 'center' });
     }, 60);
   } else if ((!note.title && !note.text || note.seeded && note.draft) && !note.trashed) setTimeout(() => {
     body.focus();

@@ -6,21 +6,12 @@ import { icon } from '../icons.js';
 import { navigate } from '../router.js';
 import { menu, toast } from '../ui.js';
 import { sanitize, openNoteAtSection } from './editor.js';
+import { htmlSections, htmlLines } from './sections.js';
 import { TEMPLATES, userTemplates, findTemplate, dailyTemplateId, dailyNote, ensureDaily } from './templates.js';
 
 // The note (or the template, before the note exists) as [heading, what's written under it]
 function sections(html) {
-  const d = document.createElement('div');
-  d.innerHTML = html || '';
-  const out = [];
-  for (const el of d.children) {
-    if (/^H[1-3]$/.test(el.tagName)) { out.push([el.textContent.trim(), []]); continue; }
-    if (!out.length) continue;
-    // one line per paragraph or list item
-    const parts = /^(UL|OL)$/.test(el.tagName) ? [...el.children].map(li => li.textContent) : [el.textContent];
-    out.at(-1)[1].push(...parts.map(x => (x || '').replace(/\s+/g, ' ').trim()).filter(Boolean));
-  }
-  return out.map(([h, lines]) => [h, lines.length > 3 ? [...lines.slice(0, 3), `+${lines.length - 3} more`] : lines]);
+  return htmlSections(html).map(({ title, lines }) => [title, lines.length > 3 ? [...lines.slice(0, 3), `+${lines.length - 3} more`] : lines]);
 }
 
 const templateHTML = id => { const t = findTemplate(id); return t ? (t.html instanceof Function ? t.html() : t.html) : ''; };
@@ -34,7 +25,7 @@ export function todayNoteCard() {
       <button class="chip tn-template" data-tn-template aria-label="Daily template: ${esc(tpl?.name || 'Daily note')}">${esc(tpl?.name || 'Daily note')}${icon('chevD')}</button></div>
     ${secs.length ? `<div class="tn-sections">${secs.map(([h, txt], i) => `<button class="tn-sec" data-tn-sec="${i}">
       <span class="tn-h">${esc(h)}</span><span class="tn-v ${txt.length ? '' : 'faint'}">${txt.length ? txt.map(l => `<span>${esc(l.length > 90 ? l.slice(0, 90) + '…' : l)}</span>`).join('') : 'Tap to write'}</span></button>`).join('')}</div>`
-      : `<button class="tn-sec" data-tn-open><span class="tn-v">${n?.text ? esc(n.text.slice(0, 120)) : 'Tap to start today’s note'}</span></button>`}
+      : (() => { const lines = htmlLines(n ? n.html : templateHTML(tid)); return `<button class="tn-sec" data-tn-open>${lines.length ? `<span class="tn-v ${n && !n.draft ? '' : 'faint'}">${lines.map(l => `<span>${esc(l.length > 90 ? l.slice(0, 90) + '…' : l)}</span>`).join('')}</span>` : '<span class="tn-v">Tap to start today’s note</span>'}</button>`; })()}
     <form class="capture" data-tn-capture><input class="input" name="q" placeholder="Capture a thought… (#tags)" autocomplete="off" enterkeyhint="done" aria-label="Capture to today’s note"><button class="icon-btn accent" aria-label="Add to today’s note">${icon('plus')}</button></form>
     ${n && !n.draft ? `<button class="link small tn-open" data-tn-open>Open today’s note${icon('chevR')}</button>` : ''}
   </div>`;
