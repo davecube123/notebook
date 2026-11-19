@@ -1107,6 +1107,8 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .hs-cell.on.jl { margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
 .hs-cell.on.jr { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
 .hs-cell.todo { background: transparent; border: 1.5px dashed var(--muted); }
+.hs-cell.blank { background: transparent; border: 1px solid var(--line); }
+.win-week button { background: none; border: 0; padding: 0; font-family: inherit; cursor: pointer; }
 .hs-meta { display: flex; align-items: center; gap: 4px; }
 .hs-meta .ic { width: 13px; height: 13px; margin-left: auto; color: var(--faint); }
 /* one habit */
@@ -1204,7 +1206,7 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .win-next { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 12px; background: var(--fill-2); font-size: 14px !important; text-align: left; }
 .win-next .ic { width: 18px; height: 18px; color: var(--accent); flex: none; }
 .win-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; width: 100%; }
-.win-week span { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--muted); }
+.win-week > * { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: var(--muted); }
 .win-week i { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--fill); color: var(--faint); }
 .win-week i .ic { width: 17px; height: 17px; }
 .win-week .won i { background: color-mix(in srgb, var(--q-yellow) 22%, transparent); color: var(--q-yellow); }

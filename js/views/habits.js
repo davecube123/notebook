@@ -6,9 +6,9 @@ import { list, get, save, remove, uid, settings, setSettings } from '../db.js';
 import { esc, today, addDays, fmtDay, fmtLongDay, parseDay, daysBetween, haptic, weekdayNames } from '../util.js';
 import { icon } from '../icons.js';
 import { rerender, navigate } from '../router.js';
-import { sheet, toast, confetti, confirmDialog, emojiPicker, menu } from '../ui.js';
+import { sheet, toast, confetti, confirmDialog, emojiPicker, menu, promptDialog } from '../ui.js';
 import { heatmap } from './heatmap.js';
-import { getOne, toggleOne } from './onething.js';
+import { getOne, toggleOne, setOne } from './onething.js';
 
 const dayOf = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
@@ -171,6 +171,28 @@ const streakLabel = st => (st.unit === 'day' ? `${st.streak}` : `${st.streak} ${
 
 // Done days (or periods) in a row join into one chain
 const join = (cells, i) => (cells[i]?.state === 'on' ? `${cells[i - 1]?.state === 'on' ? ' jl' : ''}${cells[i + 1]?.state === 'on' ? ' jr' : ''}` : '');
+// The One Thing's last 14 days: done, written but not ticked, or never written
+function oneStrip() {
+  const t = today(), cells = [];
+  for (let i = 13; i >= 0; i--) { const d = addDays(t, -i), o = oneOf(d); cells.push({ day: d, state: o?.done ? 'on' : d === t ? 'todo' : o ? 'off' : 'blank' }); }
+  return `<div class="hs-strip" role="group" aria-label="The one thing, last 14 days">${cells.map((c, i) => `<button class="hs-cell ${c.state}${join(cells, i)}" data-onecell="${c.day}" aria-label="${fmtDay(c.day)}: ${c.state === 'on' ? 'done' : c.state === 'blank' ? 'not written' : c.state === 'todo' ? 'not done yet' : 'missed'}" aria-pressed="${c.state === 'on'}"></button>`).join('')}</div>`;
+}
+
+// tick / untick the One Thing on a past day (a day it wasn't written: write it first)
+async function toggleOneDay(day, el, after = rerender) {
+  if (day === today()) { toggleOneThing(day, el); after(); return; }
+  let o = oneOf(day);
+  if (!o) {
+    const v = await promptDialog(`Your one thing on ${fmtDay(day)}`, { placeholder: 'What did you finish?', ok: 'Save and tick' });
+    if (!v?.trim()) return;
+    setOne(day, v.trim()); o = getOne(day);
+  }
+  const was = dayScore(day), prev = { ...o };
+  save('onething', { ...o, done: !o.done, doneAt: o.done ? null : Date.now() }); haptic(8);
+  after();
+  if (!celebrate(day, was, el)) toast(`${fmtDay(day)}: ${prev.done ? 'unticked' : 'ticked'}`, { action: 'Undo', onAction: () => { save('onething', prev); after(); } });
+}
+
 function habitStrip(h) {
   const t = today(), r = rhythmOf(h), target = targetOf(h);
   if (r === 'daily') {
@@ -374,6 +396,10 @@ export function renderHabits(main, params = {}) {
     if (ua) { const h = get('habits', ua.dataset.unarchive); save('habits', { ...h, archivedAt: null, startDay: today(), order: activeHabits().length }); rerender(); return; }
     const hc = e.target.closest('[data-hcell]');
     if (hc) { toggleDay(hc.dataset.hcell, hc.dataset.day, hc); return; }
+    const oc = e.target.closest('[data-onecell]');
+    if (oc) { toggleOneDay(oc.dataset.onecell, oc); return; }
+    const dop = e.target.closest('[data-dayopen]');
+    if (dop) { dayHabitsSheet(dop.dataset.dayopen); return; }
   });
 }
 
@@ -413,12 +439,17 @@ function progressHTML(hs, archived) {
   }).join('');
   return `<section class="card pad pp-week">
       <div class="hs-head"><h3>Days won</h3><span class="muted small">${s.streak ? `${plural(s.streak, 'day')} in a row · best ${s.best}` : `best streak ${s.best}`}</span></div>
-      <div class="win-week">${week.map(d => { const sc = d <= t ? dayScore(d) : null; return `<span class="${sc?.won ? 'won' : d > t ? 'future' : ''} ${d === t ? 'today' : ''}"><i>${icon(sc && !sc.won && d < t ? 'x' : 'trophy')}</i>${fmtDay(d, { weekday: 'narrow' })}</span>`; }).join('')}</div>
+      <div class="win-week">${week.map(d => { const sc = d <= t ? dayScore(d) : null, cls = `${sc?.won ? 'won' : d > t ? 'future' : ''} ${d === t ? 'today' : ''}`, inner = `<i>${icon(sc && !sc.won && d < t ? 'x' : 'trophy')}</i>${fmtDay(d, { weekday: 'narrow' })}`; return d > t ? `<span class="${cls}">${inner}</span>` : `<button class="${cls}" data-dayopen="${d}" aria-label="${fmtLongDay(d)}${sc.won ? ': won' : ''}. Open its checklist">${inner}</button>`; }).join('')}</div>
+      <p class="muted small">Tap a day to tick what you missed.</p>
     </section>
     ${periodRows}
     ${periodRows ? '<p class="muted small pad-x">The thin line marks how much of the period has passed; a bar short of it is behind pace.</p>' : ''}
     <section class="card pad hs-card">
       <div class="hs-head"><h3>Your habits</h3><span class="muted small">tap a day to fix it</span></div>
+      <div class="hs-habit">
+        <div class="hs-top"><a class="hs-name" href="#/onething"><span class="habit-emoji">${icon('target')}</span><b>The one thing</b></a></div>
+        ${oneStrip()}
+      </div>
       ${hs.map(h => { const st = habitStreak(h); return `<div class="hs-habit">
         <div class="hs-top">
           <a class="hs-name" href="#/habits/${h.id}"><span class="habit-emoji">${esc(h.emoji || '✨')}</span><b>${esc(h.name)}</b></a>
@@ -444,7 +475,7 @@ export function dayHabitsSheet(day) {
       draw();
       body.addEventListener('click', e => {
         const t = e.target.closest('[data-habit-toggle]'); if (t) { toggleHabit(day, t.dataset.habitToggle, t); draw(); }
-        const o = e.target.closest('[data-habit-one]'); if (o) { toggleOneThing(day, o); draw(); }
+        const o = e.target.closest('[data-habit-one]'); if (o) toggleOneDay(day, o, draw);
       });
     },
   });
