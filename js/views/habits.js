@@ -8,7 +8,7 @@ import { icon } from '../icons.js';
 import { rerender, navigate } from '../router.js';
 import { sheet, toast, confetti, confirmDialog, emojiPicker, menu, promptDialog } from '../ui.js';
 import { heatmap } from './heatmap.js';
-import { getOne, toggleOne, setOne } from './onething.js';
+import { getOne, toggleOne, setOne, setOneDone } from './onething.js';
 
 const dayOf = ts => { const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
 
@@ -121,14 +121,14 @@ function celebrate(day, was, el) {
 export function toggleOneThing(day, el) {
   const was = dayScore(day);
   const o = oneOf(day);
-  if (!o) { toast('Write today’s One Thing first', { action: 'Write', onAction: () => navigate('#/onething') }); return; }
-  if (o.done) { save('onething', { ...o, done: false, doneAt: null }); haptic(8); return; }
+  if (!o) { toast('Mark a to-do as today’s One Thing first', { action: 'To-do', onAction: () => navigate('#/onething') }); return; }
+  if (o.done) { setOneDone(day, false); haptic(8); return; }
   if (!celebrateLater(day, was, el)) toggleOne(day, el);
 }
 // tick the one thing quietly when the win sheet will celebrate it anyway
 function celebrateLater(day, was, el) {
   const o = getOne(day);
-  save('onething', { ...o, done: true, doneAt: Date.now() });
+  setOneDone(day, true);
   if (celebrate(day, was, el)) return true;
   save('onething', o); // nothing new to celebrate: let the One Thing's own moment play
   return false;
@@ -188,7 +188,7 @@ async function toggleOneDay(day, el, after = rerender) {
     setOne(day, v.trim()); o = getOne(day);
   }
   const was = dayScore(day), prev = { ...o };
-  save('onething', { ...o, done: !o.done, doneAt: o.done ? null : Date.now() }); haptic(8);
+  setOneDone(day, !o.done); haptic(8);
   after();
   if (!celebrate(day, was, el)) toast(`${fmtDay(day)}: ${prev.done ? 'unticked' : 'ticked'}`, { action: 'Undo', onAction: () => { save('onething', prev); after(); } });
 }
@@ -265,9 +265,9 @@ function habitRow(h, st, day) {
 
 // The day's One Thing as the first "Every day" row, once it's written
 function oneThingRow(o, day) {
-  if (!o) return `<button class="ht-row ht-one empty" data-habit-one="${day}" aria-disabled="true" aria-label="The one thing: not written yet">
+  if (!o) return `<button class="ht-row ht-one empty" data-habit-one="${day}" aria-disabled="true" aria-label="The one thing: not picked yet">
     <span class="check-circle"></span><span class="habit-emoji">${icon('target')}</span>
-    <span class="ht-text"><span class="ht-name">The one thing</span><span class="ht-sub">Not written yet</span></span></button>`;
+    <span class="ht-text"><span class="ht-name">The one thing</span><span class="ht-sub">Not picked yet</span></span></button>`;
   return `<button class="ht-row ht-one ${o.done ? 'on' : ''}" data-habit-one="${day}" role="checkbox" aria-checked="${!!o.done}">
     <span class="check-circle">${icon('check')}</span><span class="habit-emoji">${icon('target')}</span>
     <span class="ht-text"><span class="ht-name">${esc(o.text)}</span><span class="ht-sub">The one thing</span></span></button>`;

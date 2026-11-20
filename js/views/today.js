@@ -4,7 +4,7 @@ import { APP_VERSION } from '../version.js';
 import { esc, today, fmtLongDay, greeting, parseDay } from '../util.js';
 import { icon } from '../icons.js';
 import { navigate, rerender } from '../router.js';
-import { oneThingCard, bindOneThing } from './onething.js';
+import { todoCard, bindTodos } from './onething.js';
 import { habitsCard, bindHabits } from './habits.js';
 import { momentsOn, momentRow, bindMoments } from './moments.js';
 import { todayNoteCard, bindTodayNote } from './todaynote.js';
@@ -45,7 +45,7 @@ export function renderToday(main) {
     ${installCard()}
     <div class="today-grid">
       <div class="col">
-        ${oneThingCard(t, { big: true, link: true })}
+        ${todoCard(t, { link: true })}
         ${st.showFeelings ? feelingsCard() : ''}
         ${habitsCard(t)}
       </div>
@@ -71,7 +71,7 @@ export function renderToday(main) {
   </div>`;
 
   const page = main.querySelector('.page');
-  bindOneThing(page);
+  bindTodos(page);
   bindHabits(page);
   bindInstall(page, rerender);
   bindMoments(page, rerender);

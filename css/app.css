@@ -1259,3 +1259,33 @@ input[type="range"].unset { opacity: .35; filter: grayscale(1); }
 .tn-open { align-self: flex-start; display: inline-flex; align-items: center; gap: 2px; }
 .tn-open .ic { width: 14px; height: 14px; }
 .tn-v span { display: block; }
+
+/* ---------- To-do (the One Thing is one of its tasks) ---------- */
+.todo-card .card-head h3 .td-won { color: var(--good); font-weight: 500; font-size: 15px; }
+.td-list { display: flex; flex-direction: column; }
+.td-row { display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: .5px solid var(--line); }
+.td-row:first-child { border-top: 0; }
+.td-check { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--faint); display: grid; place-items: center; color: transparent; padding: 0; background: none; transition: background .15s, border-color .15s; }
+.td-check .ic { width: 15px; height: 15px; stroke-width: 3; }
+.td-row.done .td-check { background: var(--good); border-color: var(--good); color: #fff; }
+.td-text { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 10px 0; font: inherit; color: var(--ink); display: flex; flex-direction: column; gap: 2px; overflow-wrap: anywhere; }
+.td-row.done .td-text { color: var(--muted); text-decoration: line-through; }
+.td-star { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: none; border: 0; color: var(--faint); opacity: .55; }
+.td-star .ic { width: 20px; height: 20px; }
+.td-star.on { color: var(--accent); opacity: 1; }
+.td-row.is-one { margin: 0 -10px; padding: 4px 10px; border-radius: 14px; border-top: 0; background: color-mix(in srgb, var(--accent) 11%, transparent); }
+.td-row.is-one + .td-row { border-top: 0; }
+.td-row.is-one .td-check { width: 30px; height: 30px; border-color: var(--accent); }
+.td-row.is-one.done .td-check { border-color: var(--good); }
+.td-row.is-one .td-text span:last-child { font-weight: 650; font-size: 18px; letter-spacing: -.01em; }
+.todo-card.big .td-row.is-one .td-text span:last-child { font-size: 21px; }
+.td-eyebrow { font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .04em; color: var(--accent); text-decoration: none; }
+.td-row.is-one.done .td-eyebrow { color: var(--good); }
+.td-hint { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--muted); margin: 8px 0 2px; }
+.td-hint .ic { flex: none; width: 16px; height: 16px; color: var(--accent); margin-top: 1px; }
+.td-add { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.td-plus { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: var(--accent); }
+.td-plus .ic { width: 20px; height: 20px; }
+.td-add .input { flex: 1; min-width: 0; }
+.todo-card .carry { margin-top: 10px; }
+.one-stats-label { margin-top: 26px; }

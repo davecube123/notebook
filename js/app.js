@@ -20,7 +20,7 @@ import './install.js';
 const NAV = [
   ['today', 'Today', 'today', '#/today'],
   ['notes', 'Notes', 'notes', '#/notes'],
-  ['onething', 'One Thing', 'target', '#/onething'],
+  ['onething', 'To-do', 'target', '#/onething'],
   ['feel', 'Feelings', 'heart', '#/feel'],
   ['habits', 'Habits', 'habits', '#/habits'],
   ['calendar', 'Calendar', 'calendar', '#/calendar'],
@@ -93,7 +93,7 @@ function openSearch() {
             .forEach(m => res.push({ k: 'Feeling', href: '#/feel', html: `${icon('heart')}<div class="grow">${highlight(m.words.join(', '), q)}<div class="muted small">${fmtDay(m.date)}${m.note ? ' · ' + highlight(snippet(m.note, q, 60), q) : ''}</div></div>` }));
           list('moments').filter(m => m.text.toLowerCase().includes(q)).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
             .forEach(m => res.push({ k: 'Moment', href: `#/calendar?day=${m.date}`, html: `${iconBadge(m.icon, 26)}<div class="grow">${highlight(m.text, q)}<div class="muted small">${fmtDay(m.date)}</div></div>` }));
-          const NAVQ = [['today', 'Today'], ['notes', 'Notes'], ['onething', 'One Thing'], ['habits', 'Habits'], ['calendar', 'Calendar'], ['people', 'People'], ['settings', 'Settings']];
+          const NAVQ = [['today', 'Today'], ['notes', 'Notes'], ['onething', 'To-do'], ['habits', 'Habits'], ['calendar', 'Calendar'], ['people', 'People'], ['settings', 'Settings']];
           NAVQ.filter(([, l]) => l.toLowerCase().startsWith(q)).forEach(([k, l]) => res.push({ k: 'Go to', href: `#/${k}`, html: `${icon('chevR')}<div class="grow">${l}</div>` }));
         }
         sel = 0;
