@@ -8,6 +8,7 @@ import { SECTIONS, LEGACY_FIELDS, TABS, CIRCLES } from './fields.js';
 import { personalityTab, handlePersonality, personalityText } from './typology.js';
 import { notesAbout, possibleNotes, namesakes, personLine, contextFor, linkNote, unlinkNote, notThem, mentionHTML, nameTerms } from './mentions.js';
 import { newNote, noteTitle } from './notes.js';
+import { patternsTab, handlePatterns, submitPattern, logPatternPicker, pickedPatterns, patternsForEncounter, addSightings, patternsText } from './patterns.js';
 
 const ui = { q: '', circle: '', sort: 'recent' };
 const KEEP_DAYS = { 'Week': 7, '2 weeks': 14, 'Month': 30, '3 months': 90, '6 months': 180, 'Year': 365 };
@@ -48,7 +49,7 @@ function listHTML() {
     if (ui.circle === '★') { if (!p.favorite) return false; }
     else if (ui.circle && p.circle !== ui.circle) return false;
     if (!q) return true;
-    const hay = [p.name, p.summary, p.circle, ...(p.tags || []), ...Object.values(p.fields || {}), ...(p.interactions || []).map(i => i.note + ' ' + (i.where || ''))].join(' ').toLowerCase();
+    const hay = [p.name, p.summary, p.circle, ...(p.tags || []), ...Object.values(p.fields || {}), ...(p.interactions || []).map(i => i.note + ' ' + (i.where || '')), ...(p.patterns || []).map(pt => `${pt.when} ${pt.does} ${pt.helps || ''}`)].join(' ').toLowerCase();
     return q.split(/\s+/).every(w => hay.includes(w.replace(/^#/, '')));
   });
   const sorters = {
@@ -182,17 +183,19 @@ function notesTab(p) {
 
 function tabHTML(p, tab) {
   if (tab === 'notes') return notesTab(p);
+  if (tab === 'patterns') return patternsTab(p);
   if (tab === 'log') {
     const ints = [...(p.interactions || [])].sort((a, b) => b.date.localeCompare(a.date));
     return `<form class="card pad log-form" data-log-form>
         <div class="grid2"><input class="input" type="date" name="date" value="${today()}" aria-label="Date"><input class="input" name="where" placeholder="Where" aria-label="Where"></div>
         <textarea class="input" name="note" rows="2" placeholder="What happened? What did you learn about them?" aria-label="Note"></textarea>
+        ${logPatternPicker(p)}
         <div class="row-end"><button class="btn primary sm">${icon('plus')}Log encounter</button></div>
       </form>
       ${ints.length ? `<div class="timeline">${ints.map(i => `<div class="tl-item"><div class="tl-dot"></div><div class="tl-body">
         <div class="tl-head"><b>${fmtDay(i.date, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</b><span class="muted small">${relDays(i.date)}${i.where ? ' · ' + esc(i.where) : ''}</span>
         <button class="icon-btn sm" data-int-del="${i.id}" aria-label="Delete">${icon('x')}</button></div>
-        ${i.note ? `<div class="tl-note">${esc(i.note).replace(/\n/g, '<br>')}</div>` : ''}</div></div>`).join('')}</div>`
+        ${i.note ? `<div class="tl-note">${esc(i.note).replace(/\n/g, '<br>')}</div>` : ''}${patternsForEncounter(p, i.id)}</div></div>`).join('')}</div>`
       : '<p class="muted">No encounters logged yet.</p>'}`;
   }
   return personalityTab(p);
@@ -232,7 +235,7 @@ function renderPerson(main, id, query) {
         </div>
         ${rc ? `<div class="banner warn">${icon('bell')}It's been ${rc.gap === Infinity ? 'a while' : rc.gap + ' days'} — you wanted to stay in touch every ${p.fields.keepInTouch.toLowerCase()}.</div>` : ''}
       </div>
-      <nav class="seg" role="tablist">${TABS.map(([k, l, ic]) => `<a role="tab" class="${k === tab ? 'on' : ''}" href="#/people/${id}?tab=${k}" aria-selected="${k === tab}">${icon(ic)}<span>${l}${k === 'notes' && notesAbout(p).length ? ` <em class="tab-count">${notesAbout(p).length}</em>` : ''}</span></a>`).join('')}</nav>
+      <nav class="seg" role="tablist">${TABS.map(([k, l, ic]) => `<a role="tab" class="${k === tab ? 'on' : ''}" href="#/people/${id}?tab=${k}" aria-selected="${k === tab}">${icon(ic)}<span>${l}${k === 'notes' && notesAbout(p).length ? ` <em class="tab-count">${notesAbout(p).length}</em>` : ''}${k === 'patterns' && (p.patterns || []).length ? ` <em class="tab-count">${p.patterns.length}</em>` : ''}</span></a>`).join('')}</nav>
       <div class="tab-body">${tabHTML(p, tab)}</div>
     </div>`;
     main.querySelectorAll('textarea.autosize').forEach(a => { a.style.height = 'auto'; a.style.height = a.scrollHeight + 'px'; });
@@ -258,17 +261,21 @@ function renderPerson(main, id, query) {
     }
   };
   main.onsubmit = e => {
+    const pf = e.target.closest('[data-pat-form]');
+    if (pf) { e.preventDefault(); submitPattern(pf, id, () => { const st = main.scrollTop; draw(); main.scrollTop = st; }); return; }
     const f = e.target.closest('[data-log-form]');
     if (!f) return;
     e.preventDefault();
-    if (!f.note.value.trim() && !f.where.value.trim()) { toast('Add a note or a place'); return; }
-    const p = get('people', id);
-    update({ interactions: [...(p.interactions || []), { id: uid(), date: f.date.value || today(), where: f.where.value.trim(), note: f.note.value.trim() }] }, { redraw: true });
-    haptic(); toast('Encounter logged');
+    const picked = pickedPatterns(f);
+    if (!f.note.value.trim() && !f.where.value.trim() && !picked.length) { toast('Add a note or a place'); return; }
+    const p = get('people', id), iid = uid(), date = f.date.value || today();
+    update({ interactions: [...(p.interactions || []), { id: iid, date, where: f.where.value.trim(), note: f.note.value.trim() }], patterns: addSightings(p, picked, iid, date) }, { redraw: true });
+    haptic(); toast(picked.length ? `Encounter logged · ${picked.length} pattern${picked.length === 1 ? '' : 's'} seen again` : 'Encounter logged');
   };
   main.onclick = async e => {
     const redraw = () => { const st = main.scrollTop; draw(); main.scrollTop = st; };
     if (handlePersonality(e, id, redraw)) return;
+    if (handlePatterns(e, id, redraw)) return;
     const ln = e.target.closest('[data-link-note]');
     if (ln) { const nid = ln.dataset.linkNote; linkNote(nid, id); haptic(8); redraw(); toast('Linked', { action: 'Undo', onAction: () => { unlinkNote(nid, id); redraw(); } }); return; }
     const ul = e.target.closest('[data-unlink-note]');
@@ -292,7 +299,12 @@ function renderPerson(main, id, query) {
       return;
     }
     const idel = e.target.closest('[data-int-del]');
-    if (idel) { const p = get('people', id); const it = p.interactions.find(i => i.id === idel.dataset.intDel); update({ interactions: p.interactions.filter(i => i !== it) }, { redraw: true }); toast('Encounter removed', { action: 'Undo', onAction: () => { const p2 = get('people', id); update({ interactions: [...p2.interactions, it] }, { redraw: true }); } }); return; }
+    if (idel) {
+      const p = get('people', id), it = p.interactions.find(i => i.id === idel.dataset.intDel), pats = p.patterns;
+      update({ interactions: p.interactions.filter(i => i !== it), ...(pats ? { patterns: pats.map(pt => ({ ...pt, seen: (pt.seen || []).filter(s => s.intId !== it.id) })) } : {}) }, { redraw: true });
+      toast('Encounter removed', { action: 'Undo', onAction: () => { const p2 = get('people', id); update({ interactions: [...p2.interactions, it], ...(pats ? { patterns: pats } : {}) }, { redraw: true }); } });
+      return;
+    }
     const rt = e.target.closest('[data-rmtag]');
     if (rt) { const p = get('people', id); update({ tags: p.tags.filter(t => t !== rt.dataset.rmtag) }, { redraw: true }); return; }
     const b = e.target.closest('[data-act]');
@@ -333,6 +345,7 @@ function exportPerson(p) {
     if (rows.length) lines.push(`## ${s.title}`, ...rows, '');
   });
   lines.push(...personalityText(p));
+  lines.push(...patternsText(p));
   if (p.notes) lines.push('## Notes', p.notes, '');
   if (p.interactions?.length) lines.push('## Log', ...[...p.interactions].sort((a, b) => a.date.localeCompare(b.date)).map(i => `- ${i.date}${i.where ? ' @ ' + i.where : ''}${i.mood ? ' ' + i.mood : ''}: ${i.note}`));
   import('../util.js').then(u => u.download(`${p.name.replace(/[^\w-]+/g, '-')}.md`, lines.filter((l, i, a) => l || a[i - 1]).join('\n'), 'text/markdown'));

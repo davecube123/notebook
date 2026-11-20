@@ -114,6 +114,7 @@ export const findField = (key, custom = []) =>
 
 export const TABS = [
   ['personality', 'Personality', 'brain'],
+  ['patterns', 'Patterns', 'restore'],
   ['log', 'Log', 'history'],
   ['notes', 'Notes', 'notes'],
 ];
